@@ -7,7 +7,7 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from constants import KNOWLEDGE_BASE_PATH
 from recall_utils import load_state, generate_videoclips
-from rags.text_rag import search_knowledge_base, create_new_index, get_llm_response, get_mm_llm_response
+from rags.text_rag import search_knowledge_base, create_new_index, get_llm_response, get_mm_llm_response, get_media_indices
 from rags.scraper import perform_web_search
 
 # CSS for custom styling
@@ -99,10 +99,16 @@ async def get_openai_response(user_query):
     # st.session_state.messages.append({"role": "system", "content": prompt})
     # Setting tools call to False to not return function data.
     # Commenting out the sync API call
-    # response_text, function_data = await get_llm_response(user_query, messages=st.session_state.messages, tools_call=False, response_container=response_container)
+    # response_text, function_data = await get_llm_response_legacy(user_query, messages=st.session_state.messages, tools_call=False, response_container=response_container)
+
+    # Get images and text index in a separate thread
+    tp_executor = ThreadPoolExecutor(max_workers=1)
+    future = tp_executor.submit(get_media_indices, user_query, text_docs, img_docs, st.session_state.media_label, st.session_state.indexes)
     response_text, function_data  = await get_mm_llm_response(user_query, text_docs, img_docs, st.session_state.media_label, st.session_state.indexes, response_container)
     if response_text:
         st.session_state.messages.append({"role": "assistant", "content": response_text})
+    
+    # Ignore this if condition if the tools_call is set to False
     if function_data:
         tp_executor = ThreadPoolExecutor(max_workers=len(function_data))
         futures = []
@@ -133,16 +139,19 @@ async def get_openai_response(user_query):
         else:
             st.session_state.messages.append({"role": "assistant", "content": "This is all the information I could gather for your question."})
     
-    if img_docs:
-        for doc in img_docs:
+    img_results, text_results = future.result()
+    tp_executor.shutdown()
+
+    if img_results:
+        for doc in img_results:
             relative_img_path = doc.metadata["file_path"].split('events_kb/', 1)[1]
             new_img_path = os.path.join('events_kb', relative_img_path)
             st.image(new_img_path)
             st.session_state.messages.append({"role": "assistant", "content": new_img_path, "is_image": True})
 
-    if text_docs:
+    if text_results:
         new_video_path = './temp/video_clips'
-        for doc in text_docs:
+        for doc in text_results:
             text_path = doc['file_path']
             video_path = os.path.join(os.getcwd(), 'temp', 'video_data', Path(text_path).parent.name+'.mp4')
             start_time = doc['timestamps'][0][0]

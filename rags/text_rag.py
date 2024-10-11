@@ -271,6 +271,39 @@ def load_documents(input_data):
         
     return documents
 
+def get_media_indices(user_query, text_docs, img_docs, media_label, session_state):
+    video_rag_inst = session_state[media_label]
+    query_str = f"""Give one one or more text and image indices to best represent the question below from the provided input documents:
+        {user_query}
+        Give the answer in the following JSON format:
+        {{
+            "image_indices": <list of indices for the matching image documents>,
+            "text_indices": <list of indices for the matching text documents>
+        }}
+    """
+    context = f"The following is the context for {media_label} based on user's question. Answer user's question from the provided text and image documents. For both text and image documents, select the indices that best represent the user's question."
+    event_metadata = {
+        'text_docs': text_docs,
+        'img_docs': img_docs
+    }
+    
+    response_text = video_rag_inst.query_with_oai(query_str, context, img_docs, event_metadata=event_metadata)
+    img_results = []
+    text_results = []
+    
+    print(f"Response for media indices: {response_text}")
+    try:
+        index_json = json.loads(response_text)
+        for idx in index_json.get("image_indices", []):
+            img_results.append(img_docs[idx])
+        
+        for idx in index_json.get("text_indices", []):
+            text_results.append(text_docs[idx])
+    except Exception as e:
+        print(f"Error processing media indices: {traceback.print_exc()}")
+    
+    return img_results, text_results
+
 async def update_response_container(response_container, response_text, token):
     response_text.append(token)
     response_container.markdown(''.join(response_text))
