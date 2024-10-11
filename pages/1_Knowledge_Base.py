@@ -142,28 +142,31 @@ async def get_openai_response(user_query):
     img_results, text_results = future.result()
     tp_executor.shutdown()
 
-    if img_results:
-        for doc in img_results:
-            relative_img_path = doc.metadata["file_path"].split('events_kb/', 1)[1]
-            new_img_path = os.path.join('events_kb', relative_img_path)
-            st.image(new_img_path)
-            st.session_state.messages.append({"role": "assistant", "content": new_img_path, "is_image": True})
-
     if text_results:
         new_video_path = './temp/video_clips'
-        for doc in text_results:
+        for doc in text_results[:1]:
             text_path = doc['file_path']
             video_path = os.path.join(os.getcwd(), 'temp', 'video_data', Path(text_path).parent.name+'.mp4')
             start_time = doc['timestamps'][0][0]
             end_time = doc['timestamps'][-1][-1]
             print(f"Adding video: {video_path} from {start_time} to {end_time}")
 
-            video_data = [{'video_file': video_path, 'timestamps': [start_time, end_time]}]
-            clips, clip_paths = generate_videoclips(new_video_path, video_data)
-            st.video(clip_paths[0])
+            #video_data = [{'video_file': video_path, 'timestamps': [start_time, end_time]}]
+            #clips, clip_paths = generate_videoclips(new_video_path, video_data)
+            #st.video(clip_paths[0])
+            st.video(video_path, start_time=start_time, end_time=end_time)
             st.session_state.messages.append(
-                {"role": "assistant", "content": clip_paths[0], "is_video": True, "start_time": start_time, "end_time": end_time}
+                {"role": "assistant", "content": video_path, "is_video": True, "start_time": start_time, "end_time": end_time}
                 )
+
+    elif img_results :
+        for doc in img_results:
+            relative_img_path = doc.metadata["file_path"].split('events_kb/', 1)[1]
+            new_img_path = os.path.join('events_kb', relative_img_path)
+            st.image(new_img_path)
+            st.session_state.messages.append({"role": "assistant", "content": new_img_path, "is_image": True})
+
+
     return response_text
 
 # Function to switch to the chat interface
