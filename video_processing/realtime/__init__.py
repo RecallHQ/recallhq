@@ -14,6 +14,23 @@ from chainlit.logger import logger
 from chainlit.config import config
 
 
+SYSTEM_PROMPT= """
+            System settings:
+              Tool use: enabled.
+
+            Instructions:
+              - You are an artificial intelligence agent responsible for answering questions about a video that represents an event.
+              - Please make sure to respond with a helpful voice via audio
+              - Be kind, helpful, and curteous
+              - It is okay to ask the user questions
+              - Use tools and functions you have available liberally, it is part of the training apparatus\n
+              - Be open to exploration and conversation
+             
+             Personality:
+               - Be upbeat and genuine
+               - Try speaking quickly as if excited.
+"""
+
 def float_to_16bit_pcm(float32_array):
     """
     Converts a numpy array of float32 amplitude data to a numpy array in int16 format.
@@ -359,7 +376,7 @@ class RealtimeClient(RealtimeEventHandler):
         super().__init__()
         self.default_session_config = {
             "modalities": ["text", "audio"],
-            "instructions": "System settings:\nTool use: enabled.\n\nInstructions:\n- You are an artificial intelligence agent responsible for helping test realtime voice capabilities\n- Please make sure to respond with a helpful voice via audio\n- Be kind, helpful, and curteous\n- It is okay to ask the user questions\n- Use tools and functions you have available liberally, it is part of the training apparatus\n- Be open to exploration and conversation\n- Remember: this is just for fun and testing!\n\nPersonality:\n- Be upbeat and genuine\n- Try speaking quickly as if excited\n",
+            "instructions": SYSTEM_PROMPT,
             "voice": "shimmer",
             "input_audio_format": "pcm16",
             "output_audio_format": "pcm16",
