@@ -86,6 +86,7 @@ tools = [
 ]
 
 client = openai.AsyncClient(api_key=config["api_key"], base_url=config["endpoint_url"])
+audio_client = openai.OpenAI(api_key=config["api_key"])
 
 def load_knowledge_base(media_label):
     # load knowledge base
@@ -325,6 +326,15 @@ async def get_mm_llm_response(query_str, text_docs, img_docs, media_label, sessi
 
     return ''.join(response_text), function_data
 
+def get_llm_tts_response(text_input):
+    audio_response = audio_client.audio.speech.create(
+        model=config["audio_model"],
+        voice="alloy",
+        input=text_input        
+    )
+    print(audio_response)
+    audio_response.write_to_file("output.mp3")
+    return "output.mp3"
 
 async def get_llm_response(query, messages, tools_call=True, response_container=None):
 

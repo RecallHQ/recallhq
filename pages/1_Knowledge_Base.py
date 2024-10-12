@@ -8,7 +8,7 @@ import speech_recognition as sr
 from concurrent.futures import ThreadPoolExecutor
 from constants import KNOWLEDGE_BASE_PATH
 from recall_utils import load_state, generate_videoclips
-from rags.text_rag import search_knowledge_base, create_new_index, get_llm_response, get_mm_llm_response, get_media_indices
+from rags.text_rag import search_knowledge_base, create_new_index, get_llm_response, get_mm_llm_response, get_media_indices, get_llm_tts_response
 from rags.scraper import perform_web_search
 
 
@@ -163,6 +163,8 @@ async def get_openai_response(user_query):
         else:
             st.session_state.messages.append({"role": "assistant", "content": "This is all the information I could gather for your question."})
     
+    audio_path = get_llm_tts_response(response_text)
+    st.audio(audio_path, autoplay=True)
     img_results, text_results = future.result()
     tp_executor.shutdown()
 
