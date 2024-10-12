@@ -10,6 +10,7 @@ from constants import KNOWLEDGE_BASE_PATH
 from recall_utils import load_state, generate_videoclips
 from rags.text_rag import search_knowledge_base, create_new_index, get_llm_response, get_mm_llm_response, get_media_indices, get_llm_tts_response
 from rags.scraper import perform_web_search
+from streamlit_extras.bottom_container import bottom
 
 
 # CSS for custom styling
@@ -107,7 +108,7 @@ for media_label in st.session_state.knowledge_base.keys():
         st.session_state.futures[media_label] = [future, tp_executor]
     else:
         print(f"Index for {media_label} exists in future or index")
-    
+
 # Function to generate a response from OpenAI GPT-3.5
 async def get_openai_response(user_query):
     print(f"User query: {user_query}")
@@ -131,7 +132,7 @@ async def get_openai_response(user_query):
     response_text, function_data  = await get_mm_llm_response(user_query, text_docs, img_docs, st.session_state.media_label, st.session_state, response_container)
     if response_text:
         st.session_state.messages.append({"role": "assistant", "content": response_text})
-    
+
     # Ignore this if condition if the tools_call is set to False
     if function_data:
         tp_executor = ThreadPoolExecutor(max_workers=len(function_data))
@@ -162,7 +163,7 @@ async def get_openai_response(user_query):
             st.session_state.messages.append({"role": "assistant", "content": response_text})
         else:
             st.session_state.messages.append({"role": "assistant", "content": "This is all the information I could gather for your question."})
-    
+
     audio_path = get_llm_tts_response(response_text)
     st.audio(audio_path, autoplay=True)
     img_results, text_results = future.result()
@@ -175,22 +176,24 @@ async def get_openai_response(user_query):
             video_path = os.path.join(os.getcwd(), 'temp', 'video_data', Path(text_path).parent.name+'.mp4')
             start_time = doc['timestamps'][0][0]
             end_time = doc['timestamps'][-1][-1]
-            print(f"Adding video: {video_path} from {start_time} to {end_time}")
 
             #video_data = [{'video_file': video_path, 'timestamps': [start_time, end_time]}]
             #clips, clip_paths = generate_videoclips(new_video_path, video_data)
             #st.video(clip_paths[0])
-            st.video(video_path, start_time=start_time, end_time=end_time)
-            st.session_state.messages.append(
-                {"role": "assistant", "content": video_path, "is_video": True, "start_time": start_time, "end_time": end_time}
-                )
+            if os.path.exists(video_path):
+                print(f"Adding video: {video_path} from {start_time} to {end_time}")
+                st.video(video_path, start_time=start_time, end_time=end_time)
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": video_path, "is_video": True, "start_time": start_time, "end_time": end_time}
+                    )
 
     elif img_results :
         for doc in img_results:
             relative_img_path = doc.metadata["file_path"].split('events_kb/', 1)[1]
             new_img_path = os.path.join('events_kb', relative_img_path)
-            st.image(new_img_path)
-            st.session_state.messages.append({"role": "assistant", "content": new_img_path, "is_image": True})
+            if os.path.exists(new_img_path):
+                st.image(new_img_path)
+                st.session_state.messages.append({"role": "assistant", "content": new_img_path, "is_image": True})
 
 
     return response_text
@@ -225,7 +228,7 @@ def display_chat_history():
                 st.image(msg["content"])
             elif msg.get("is_video"):
                 st.video(msg["content"], start_time=msg["start_time"], end_time=msg["end_time"])
-            else:    
+            else:
                 st.chat_message(msg["role"]).write(msg["content"])
 
 # Streamlit layout
@@ -245,7 +248,7 @@ if st.session_state.phase == "starters":
             starter_prompts.append({
                 "title": media_label,
                 "tags": event_data["tags"],
-                "image": image_path 
+                "image": image_path
             })
         # Extract all unique tags from the events data
         all_tags = sorted(set(tag for event in starter_prompts for tag in event['tags']))
@@ -261,7 +264,7 @@ if st.session_state.phase == "starters":
 
         subtitle = "Query Results" if selected_tags else "Events Information"
         res_suffix = "result" if selected_tags else "event"
-    
+
         st.markdown(f'<h3 class="query-results-title">{subtitle}</h3>', unsafe_allow_html=True)
         st.markdown('<h7 class="query-results-title">Chat with one of the events below to get more information about the event.</h7>', unsafe_allow_html=True)
         st.markdown('<hr>', unsafe_allow_html=True)
@@ -298,39 +301,26 @@ if st.session_state.phase == "chat":
     # Display chat history
     go_back_button = st.button("Go Back to Knowledge Base")
     display_chat_history()
-    # Free-form input for chat
-    # user_input = st.text_input("Ask your own question:")
-    
+
     # Display text input and mic
+    with bottom():
+        progress_bar  = st.empty()
+        col1, col2 = st.columns([0.95, 0.05])
+        with col1:
+            # Create a chat input, which will automatically be at the bottom
+            user_input = st.chat_input("Type or record your question...")
 
-    # Create a chat input, which will automatically be at the bottom
-    user_input = st.chat_input("Type your question ...")
-    from streamlit_extras.stylable_container import stylable_container
+        with col2:
+            button_text = ""
+            print("Coming to bottom container")
+            record_button = st.button(button_text, icon='🎤', type="primary")
+            if record_button:
+                progress_bar.progress(0, text="Processing Audio...")
+                user_input = record_audio(progress_bar)
+                print("Result from Audio Processing: ", user_input)
+                progress_bar.empty()
+                st.session_state.recording = True
 
-    with stylable_container(
-        key="bottom_content",
-        css_styles="""
-            {
-                position: fixed;
-                bottom: 100px;
-                z-index: 999;
-                //background-color: #F0F2F5;
-                margin-top: 10px;
-                //border-radius: 8px;
-                padding: 5px;
-            }
-            """,
-    ):
-        button_text = "Send Audio"
-        print("Coming to bottom container")
-        record_button = st.button(button_text, icon='🎤', type="primary")
-        if record_button:
-            progress_bar = st.progress(0, text="Processing Audio...")
-            user_input = record_audio(progress_bar)
-            print("Result from Audio Processing: ", user_input)
-            progress_bar.empty()
-            st.session_state.recording = True
-    
     if user_input:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -338,7 +328,7 @@ if st.session_state.phase == "chat":
         # st.rerun()  # Update the chat with the new message
         print("Setting recording back to False")
         st.session_state.recording = False
-    
+
     # Button to go back to starter prompts
     if go_back_button:
         switch_to_starters()

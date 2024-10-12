@@ -61,10 +61,10 @@ tools = [
         "type": "function",
         "function": {
             "name": "perform_web_search",
-            "description": """Get more information about the user's question related to the event. Call this function if you do not have enough information about user's question or the user wants to know more details about the tech event, for example when the user asks 
-            'Give more information about the key highlights of the event?' or 
+            "description": """Get more information about the user's question related to the event. Call this function if you do not have enough information about user's question or the user wants to know more details about the tech event, for example when the user asks
+            'Give more information about the key highlights of the event?' or
             'Give more details about a particular topic'
-            
+
             Do not output the function arguments twice""",
             "parameters": {
                 "type": "object",
@@ -107,14 +107,14 @@ def create_new_index(media_label):
     text_storage_path = os.path.join(media_storage_path, 'text_vector_store')
     indices_path = os.path.join(media_storage_path, 'indices')
     data_path = os.path.join(media_storage_path, 'data')
-    
+
     video_rag_inst = VideoRagQdrant(data_path,
         storage_path = storage_path, text_storage_path = text_storage_path,
         text_tsindex_dirpath = indices_path, image_tsindex_dirpath = indices_path)
     video_rag_inst.create_ts_index()
     video_rag_inst.create_vector_index(documents=[])
     video_rag_inst.init_multimodal_oai()
-    
+
     return video_rag_inst
 
 def load_mm_data(video_rag_inst, media_label, media_storage_path, video_paths):
@@ -153,7 +153,7 @@ def load_mm_data(video_rag_inst, media_label, media_storage_path, video_paths):
             doc.metadata["media_label"] = media_label
             content = json.loads(doc.text)
             doc.text = content['text']
-            doc.metadata['timestamps'] = content['timestamps']    
+            doc.metadata['timestamps'] = content['timestamps']
             text_docs.append(doc)
 
         image_frame_path = os.path.join(images_path, file_prefix)
@@ -180,7 +180,7 @@ def load_mm_data(video_rag_inst, media_label, media_storage_path, video_paths):
                 print(search_path)
                 img_documents[idx+i].metadata['timestamp'] = video_rag_inst.image_search(search_path)
         all_img_docs.extend(img_documents)
-    
+
     return text_docs, all_img_docs
 
 def save_processed_document(media_label, video_paths, session_state):
@@ -190,7 +190,7 @@ def save_processed_document(media_label, video_paths, session_state):
     storage_path = os.path.join(media_storage_path, 'qdrant_mm_db')
     text_storage_path = os.path.join(media_storage_path, 'text_vector_store')
 
-    
+
     # Update the index with the new documents
     if media_label in session_state:
         print(f"Index for {media_label} exists in session_state: {session_state}")
@@ -221,7 +221,7 @@ def generate_tags_and_images(media_label, session_state):
 
     query_for_metadata = f"What are the key highlights of the {media_label}?"
     img_docs, text_docs = video_rag_inst.retrieve(query_for_metadata)
-    
+
     query_str = f"""Give 3 tags in title case for the {media_label} as a list.
         Suggest 1 image file path, as a title image, from the provided images for the {media_label}
         Give the answer in the following JSON format:
@@ -235,12 +235,12 @@ def generate_tags_and_images(media_label, session_state):
         'text_docs': text_docs,
         'img_docs': img_docs
     }
-    
+
     response_text = video_rag_inst.query_with_oai(query_str, context, img_docs, event_metadata=event_metadata)
 
     try:
         new_metadata = json.loads(response_text)
-        
+
     except Exception as e:
         print(f"Error: Invalid JSON response from OpenAI: {response_text}, {traceback.print_exc()}")
         new_metadata = {
@@ -253,9 +253,9 @@ def generate_tags_and_images(media_label, session_state):
             new_metadata['title_image'] = os.path.join('events_kb', relative_img_path)
         except Exception as ie:
             print(f"Error processing title image path: {traceback.print_exc()}")
-            new_metadata['title_image'] = None 
+            new_metadata['title_image'] = None
     print(f"Updating state with new tags and title image: {new_metadata}")
-    
+
     return new_metadata
 
 
@@ -269,7 +269,7 @@ def load_documents(input_data):
         if file_path is not None:
             doc.metadata["media_label"] = input_data[file_path]
         documents.append(doc)
-        
+
     return documents
 
 def get_media_indices(user_query, text_docs, img_docs, media_label, session_state):
@@ -287,22 +287,30 @@ def get_media_indices(user_query, text_docs, img_docs, media_label, session_stat
         'text_docs': text_docs,
         'img_docs': img_docs
     }
-    
+
     response_text = video_rag_inst.query_with_oai(query_str, context, img_docs, event_metadata=event_metadata)
     img_results = []
     text_results = []
-    
+
     print(f"Response for media indices: {response_text}")
     try:
         index_json = json.loads(response_text)
+    except Exception as e:
+        print(f"Error processing media indices: {traceback.print_exc()}")
+        index_json = {}
+
+    try:
         for idx in index_json.get("image_indices", []):
             img_results.append(img_docs[idx])
-        
+    except Exception as e:
+        print(f"Error processing image indices: {traceback.print_exc()}")
+
+    try:
         for idx in index_json.get("text_indices", []):
             text_results.append(text_docs[idx])
     except Exception as e:
-        print(f"Error processing media indices: {traceback.print_exc()}")
-    
+        print(f"Error processing text indices: {traceback.print_exc()}")
+
     return img_results, text_results
 
 async def update_response_container(response_container, response_text, token):
@@ -318,7 +326,7 @@ async def get_mm_llm_response(query_str, text_docs, img_docs, media_label, sessi
         'text_docs': text_docs,
         'img_docs': img_docs
     }
-    
+
     stream = await video_rag_inst.query_with_oai_stream(query_str, context, img_docs, event_metadata=event_metadata)
     async for part in stream:
         response_text.append(part.delta)
@@ -330,7 +338,7 @@ def get_llm_tts_response(text_input):
     audio_response = audio_client.audio.speech.create(
         model=config["audio_model"],
         voice="alloy",
-        input=text_input        
+        input=text_input
     )
     print(audio_response)
     audio_response.write_to_file("output.mp3")
@@ -357,7 +365,7 @@ async def get_llm_response(query, messages, tools_call=True, response_container=
             index_data = function_data.setdefault(index, {})
             index_data.setdefault("name", []).append(function_name)
             index_data.setdefault("arguments", []).append(arguments)
-        
+
         if token := part.choices[0].delta.content or "":
             #await update_response_container(response_container, response_text, token)
             response_text.append(token)
@@ -376,7 +384,7 @@ def search_knowledge_base(query, media_label, session_state):
     storage_path = os.path.join(media_storage_path, 'qdrant_mm_db')
     text_storage_path = os.path.join(media_storage_path, 'text_vector_store')
     indices_path = os.path.join(media_storage_path, 'indices')
-    data_path = os.path.join(media_storage_path, 'data')  
+    data_path = os.path.join(media_storage_path, 'data')
 
     video_rag_inst = session_state[media_label]
 
