@@ -6,6 +6,7 @@ import chainlit as cl
 from uuid import uuid4
 from chainlit.logger import logger
 from immersive_tools import update_video_message
+from immersive_server import manager
 import sys
 
 
@@ -36,6 +37,7 @@ async def setup_openai_realtime():
                 await cl.context.emitter.send_audio_chunk(cl.OutputAudioChunk(mimeType="pcm16", data=audio, track=cl.user_session.get("track_id")))
             if 'transcript' in delta:
                 transcript = delta['transcript']  # string, transcript added
+                print("Debug>>transcript =", transcript)
                 pass
             if 'arguments' in delta:
                 arguments = delta['arguments']  # string, function arguments added
@@ -72,8 +74,12 @@ async def start():
         content="Welcome to Recall. Type or speak a question interactively !"
     ).send()
     apex_message = cl.Message("")
+    video = cl.Video(name="output_video.mp4", path="./output_video.mp4", display="inline")
+    elements = [
+          video,
+      ]
+    apex_message.elements = elements
     cl.user_session.set("apex_message", apex_message)
-    update_video_message()
     await apex_message.send()
     await setup_openai_realtime()
 
@@ -81,6 +87,7 @@ async def start():
 async def on_message(message: cl.Message):
     openai_realtime: RealtimeClient = cl.user_session.get("openai_realtime")
     if openai_realtime and openai_realtime.is_connected():
+    
         # TODO: Try image processing with message.elements
         await openai_realtime.send_user_message_content([{ "type": 'input_text', "text": message.content }])
     else:
@@ -88,6 +95,7 @@ async def on_message(message: cl.Message):
 
 @cl.on_audio_start
 async def on_audio_start():
+    cl.user_session.set("recall_websocket", manager.latest_socket)
     try:
         openai_realtime: RealtimeClient = cl.user_session.get("openai_realtime")
         await openai_realtime.connect()
