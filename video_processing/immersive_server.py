@@ -1,6 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from typing import List
-from chainlit.server import app
+from chainlit.server import app, router
 import chainlit as cl
 
 # WebSocket manager to handle multiple connections
@@ -48,5 +48,60 @@ async def websocket_endpoint(websocket: WebSocket):
 #@app.get("/")
 #async def get():
 #    return {"message": "Hello, WebSocket!"}
+from fastapi.responses import StreamingResponse
 
+from fastapi import Request, HTTPException
+import os
 
+from typing import Generator
+VIDEO_PATH = "output_video.mp4"
+
+# Helper function to generate video content for streaming
+def video_stream(file_path: str, start: int = 0, end: int = None) -> Generator[bytes, None, None]:
+    with open(file_path, "rb") as video_file:
+        video_file.seek(start)
+        remaining_bytes = end - start + 1 if end else None
+        while remaining_bytes is None or remaining_bytes > 0:
+            chunk_size = 1024 * 1024  # 1MB chunks
+            data = video_file.read(min(chunk_size, remaining_bytes)) if remaining_bytes else video_file.read(chunk_size)
+            if not data:
+                break
+            yield data
+            if remaining_bytes:
+                remaining_bytes -= len(data)
+
+# Route for serving video content with support for range requests
+@router.get("/recall_immersive_video")
+async def stream_video(request: Request):
+    range_header = request.headers.get("range")
+    file_size = os.path.getsize(VIDEO_PATH)
+    
+    if range_header:
+        # Extract the byte ranges from the header
+        range_value = range_header.strip().replace("bytes=", "")
+        range_start, range_end = range_value.split("-")
+        
+        # Convert to integers (default to the end of the file if range_end is not provided)
+        range_start = int(range_start)
+        range_end = int(range_end) if range_end else file_size - 1
+        
+        # Validate range
+        if range_start >= file_size or range_end >= file_size:
+            raise HTTPException(status_code=416, detail="Requested Range Not Satisfiable")
+        
+        content_length = range_end - range_start + 1
+        headers = {
+            "Content-Range": f"bytes {range_start}-{range_end}/{file_size}",
+            "Accept-Ranges": "bytes",
+            "Content-Length": str(content_length),
+            "Content-Type": "video/mp4"
+        }
+        return StreamingResponse(video_stream(VIDEO_PATH, start=range_start, end=range_end), status_code=206, headers=headers)
+    
+    # Default response for full video (no range request)
+    headers = {
+        "Content-Length": str(file_size),
+        "Content-Type": "video/mp4",
+        "Accept-Ranges": "bytes"
+    }
+    return StreamingResponse(video_stream(VIDEO_PATH), headers=headers)
