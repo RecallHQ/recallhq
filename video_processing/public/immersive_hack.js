@@ -1,17 +1,4 @@
-// Function to search for a <video> element in the HTML
-function findVideoElement() {
-    const videoElement = document.querySelector('video');
 
-    if (videoElement) {
-        console.log("Video element found:", videoElement);
-        // You can add additional logic here (e.g., interact with the video, play/pause)
-    } else {
-        console.log("No video element found on the page.");
-    }
-}
-
-// Run the function when the DOM is fully loaded
-document.addEventListener("DOMContentLoaded", findVideoElement);
 
 // WebSocket connection setup
 let socket = null;
@@ -134,26 +121,6 @@ function handlePauseVideo(message) {
     }
 }
 
-function handleVideoControl(message) {
-    const videoElement = document.querySelector('video');
-    if (videoElement) {
-        switch(message.action) {
-            case 'play':
-                videoElement.play();
-                break;
-            case 'pause':
-                videoElement.pause();
-                break;
-            case 'seek':
-                if (message.time !== undefined) {
-                    videoElement.currentTime = message.time;
-                }
-                break;
-            // Add more video control actions as needed
-        }
-    }
-}
 
 // Initialize WebSocket connection
 connectWebSocket();
-

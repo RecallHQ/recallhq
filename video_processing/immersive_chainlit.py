@@ -74,7 +74,7 @@ async def start():
         content="Welcome to Recall. Type or speak a question interactively !"
     ).send()
     apex_message = cl.Message("")
-    video = cl.Video(name="output_video.mp4", path="./output_video.mp4", display="inline")
+    video = cl.Video(name="output_video", url="/recall_immersive_video/output_video.mp4", display="inline")
     elements = [
           video,
       ]

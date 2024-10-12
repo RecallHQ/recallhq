@@ -9,7 +9,7 @@ def update_video_message():
     if cl.user_session.get("event_video"):
       video = cl.user_session.get("event_video")
     else:
-        video = cl.Video(name="output_video.mp4", path="./output_video.mp4", display="inline")
+        video = cl.Video(name="output_video.mp4", path="./recall_immersive_video", display="inline")
         cl.user_session.set("event_video", video)
     video.player_config = {"playing": True}
     elements = [
@@ -77,6 +77,9 @@ async def recallws_unset_fullscreen():
         json_message = recallws_unset_video_fullscreen_msg()
         await manager.send_message(json.dumps(json_message), web_socket)
 
+
+######        
+
 async def update_apex_message():
     apex_message = cl.user_session.get("apex_message")
     await apex_message.update()
@@ -105,7 +108,6 @@ async def query_video_handler(query: str):
     random_start = random.uniform(0.0, 10.0)
     random_delta = random.uniform(0.0, 20.0)
     random_end = random_start + random_delta
-
     await cl.Message("Querying video.").send()
     return f"The query result is in the video snippet. Use tool calling to play video from {random_start} to {random_end}."
 
@@ -177,7 +179,6 @@ async def set_fullscreen_video_handler():
     await recallws_set_fullscreen()
 
 set_fullscreen_video = (set_fullscreen_video_def, set_fullscreen_video_handler)
-
 
 ### Unset full screen video tool:
 unset_fullscreen_video_def =  {
