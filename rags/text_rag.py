@@ -311,7 +311,7 @@ async def update_response_container(response_container, response_text, token):
 async def get_mm_llm_response(query_str, text_docs, img_docs, media_label, session_state, response_container):
     response_text = []
     function_data = {}
-    video_rag_inst = session_state[media_label]
+    video_rag_inst = session_state.indexes[media_label]
     context = f"The following is the context of the {media_label}. Answer user's questions from the provided text and image documents."
     event_metadata = {
         'text_docs': text_docs,
