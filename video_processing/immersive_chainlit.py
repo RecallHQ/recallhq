@@ -6,6 +6,7 @@ import chainlit as cl
 from uuid import uuid4
 from chainlit.logger import logger
 from immersive_tools import update_video_message
+from immersive_server import manager
 import sys
 
 
