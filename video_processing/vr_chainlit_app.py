@@ -154,6 +154,7 @@ async def process_query(query_str):
         for img in images:
             print(img.metadata['file_path'])
         image_list = [cl.Image(path=f"{img.metadata['file_path']}", name="images", display="inline") for img in images]
+        
         response = video_rag.query_with_oai(query_str, text, images)
         await cl.Message(content=response, elements=image_list).send()
 
