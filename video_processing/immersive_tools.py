@@ -4,12 +4,17 @@ import random
 
 def update_video_message():
     apex_message = cl.user_session.get("apex_message")
-    video = cl.Video(name="output_video.mp4", path="./output_video.mp4", display="inline")
+    if cl.user_session.get("event_video"):
+      video = cl.user_session.get("event_video")
+    else:
+        video = cl.Video(name="output_video.mp4", path="./output_video.mp4", display="inline")
+        cl.user_session.set("event_video", video)
     video.player_config = {"playing": True}
     elements = [
           video,
       ]
     apex_message.elements = elements
+
 
 async def update_apex_message():
     apex_message = cl.user_session.get("apex_message")
@@ -71,3 +76,5 @@ async def play_video_handler(start: float, end: float):
 play_video = (play_video_def, play_video_handler)
 
 tools = [play_video, query_video]
+
+
