@@ -4,11 +4,13 @@ import os
 import time
 import asyncio
 from pathlib import Path
+import speech_recognition as sr
 from concurrent.futures import ThreadPoolExecutor
 from constants import KNOWLEDGE_BASE_PATH
 from recall_utils import load_state, generate_videoclips
-from rags.text_rag import search_knowledge_base, create_new_index, get_llm_response, get_mm_llm_response, get_media_indices
+from rags.text_rag import search_knowledge_base, create_new_index, get_llm_response, get_mm_llm_response, get_media_indices, get_llm_tts_response
 from rags.scraper import perform_web_search
+
 
 # CSS for custom styling
 st.markdown("""
@@ -28,7 +30,7 @@ st.markdown("""
     .stButton > button:hover {
         background-color: #E0F7FA; /* Optional: add a hover effect */
         color: #273d5a; /* Change text color on hover */
-        padding: 10px 20px;
+        //padding: 10px 20px;
         border: 2px solid transparent; /* Set border to transparent */
     }
     .stButton > button:active {
@@ -75,6 +77,28 @@ if "indexes" not in st.session_state:
 if "futures" not in st.session_state:
     st.session_state.futures = {}
 
+if "recognizer" not in st.session_state:
+       st.session_state.recognizer = sr.Recognizer()
+if "recording" not in st.session_state:
+       st.session_state.recording = False
+
+def recognize_speech_with_whisper(progress_bar):
+    # Use the microphone as the audio source
+    with sr.Microphone() as source:
+        progress_bar.progress(30, text="Adjusting for ambient noise...")
+        st.session_state.recognizer.adjust_for_ambient_noise(source)  # Adjust for background noise
+        progress_bar.progress(50, text="Listening...")
+        audio_data = st.session_state.recognizer.listen(source)
+        progress_bar.progress(70, text="Processing user input...")
+        text = st.session_state.recognizer.recognize_whisper(audio_data)
+        progress_bar.progress(100, text="Processing user input...")
+        return text
+
+def record_audio(progress_bar):
+    transcript = recognize_speech_with_whisper(progress_bar)
+
+    return transcript
+
 for media_label in st.session_state.knowledge_base.keys():
     if media_label not in st.session_state.indexes and media_label not in st.session_state.futures:
         print(f"Index for {media_label} does not exist. Need to add to futures")
@@ -104,7 +128,7 @@ async def get_openai_response(user_query):
     # Get images and text index in a separate thread
     tp_executor = ThreadPoolExecutor(max_workers=1)
     future = tp_executor.submit(get_media_indices, user_query, text_docs, img_docs, st.session_state.media_label, st.session_state.indexes)
-    response_text, function_data  = await get_mm_llm_response(user_query, text_docs, img_docs, st.session_state.media_label, st.session_state.indexes, response_container)
+    response_text, function_data  = await get_mm_llm_response(user_query, text_docs, img_docs, st.session_state.media_label, st.session_state, response_container)
     if response_text:
         st.session_state.messages.append({"role": "assistant", "content": response_text})
     
@@ -139,31 +163,36 @@ async def get_openai_response(user_query):
         else:
             st.session_state.messages.append({"role": "assistant", "content": "This is all the information I could gather for your question."})
     
+    audio_path = get_llm_tts_response(response_text)
+    st.audio(audio_path, autoplay=True)
     img_results, text_results = future.result()
     tp_executor.shutdown()
 
-    if img_results:
-        for doc in img_results:
-            relative_img_path = doc.metadata["file_path"].split('events_kb/', 1)[1]
-            new_img_path = os.path.join('events_kb', relative_img_path)
-            st.image(new_img_path)
-            st.session_state.messages.append({"role": "assistant", "content": new_img_path, "is_image": True})
-
     if text_results:
         new_video_path = './temp/video_clips'
-        for doc in text_results:
+        for doc in text_results[:1]:
             text_path = doc['file_path']
             video_path = os.path.join(os.getcwd(), 'temp', 'video_data', Path(text_path).parent.name+'.mp4')
             start_time = doc['timestamps'][0][0]
             end_time = doc['timestamps'][-1][-1]
             print(f"Adding video: {video_path} from {start_time} to {end_time}")
 
-            video_data = [{'video_file': video_path, 'timestamps': [start_time, end_time]}]
-            clips, clip_paths = generate_videoclips(new_video_path, video_data)
-            st.video(clip_paths[0])
+            #video_data = [{'video_file': video_path, 'timestamps': [start_time, end_time]}]
+            #clips, clip_paths = generate_videoclips(new_video_path, video_data)
+            #st.video(clip_paths[0])
+            st.video(video_path, start_time=start_time, end_time=end_time)
             st.session_state.messages.append(
-                {"role": "assistant", "content": clip_paths[0], "is_video": True, "start_time": start_time, "end_time": end_time}
+                {"role": "assistant", "content": video_path, "is_video": True, "start_time": start_time, "end_time": end_time}
                 )
+
+    elif img_results :
+        for doc in img_results:
+            relative_img_path = doc.metadata["file_path"].split('events_kb/', 1)[1]
+            new_img_path = os.path.join('events_kb', relative_img_path)
+            st.image(new_img_path)
+            st.session_state.messages.append({"role": "assistant", "content": new_img_path, "is_image": True})
+
+
     return response_text
 
 # Function to switch to the chat interface
@@ -272,14 +301,44 @@ if st.session_state.phase == "chat":
     # Free-form input for chat
     # user_input = st.text_input("Ask your own question:")
     
-    # Button to send message
-    #if st.button("Send"):
-    if user_input := st.chat_input():
+    # Display text input and mic
+
+    # Create a chat input, which will automatically be at the bottom
+    user_input = st.chat_input("Type your question ...")
+    from streamlit_extras.stylable_container import stylable_container
+
+    with stylable_container(
+        key="bottom_content",
+        css_styles="""
+            {
+                position: fixed;
+                bottom: 100px;
+                z-index: 999;
+                //background-color: #F0F2F5;
+                margin-top: 10px;
+                //border-radius: 8px;
+                padding: 5px;
+            }
+            """,
+    ):
+        button_text = "Send Audio"
+        print("Coming to bottom container")
+        record_button = st.button(button_text, icon='🎤', type="primary")
+        if record_button:
+            progress_bar = st.progress(0, text="Processing Audio...")
+            user_input = record_audio(progress_bar)
+            print("Result from Audio Processing: ", user_input)
+            progress_bar.empty()
+            st.session_state.recording = True
+    
+    if user_input:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(get_openai_response(user_input))
         # st.rerun()  # Update the chat with the new message
-
+        print("Setting recording back to False")
+        st.session_state.recording = False
+    
     # Button to go back to starter prompts
     if go_back_button:
         switch_to_starters()
