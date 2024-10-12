@@ -31,8 +31,8 @@ query_video_def =  {
     }
 }
 
-async def query_video_handler(query_str: str):
-    random_start = random.uniform(0.0, 10,0)
+async def query_video_handler(query: str):
+    random_start = random.uniform(0.0, 10.0)
     random_delta = random.uniform(0.0, 20.0)
     random_end = random_start + random_delta
 
