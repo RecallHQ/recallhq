@@ -100,12 +100,20 @@ class RealtimeAPI(RealtimeEventHandler):
         self.url = url or self.default_url
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.ws = None
+        self.debug_logfile = open('recall_log_1.log', 'a')
 
     def is_connected(self):
         return self.ws is not None
 
     def log(self, *args):
         logger.debug(f"[Websocket/{datetime.utcnow().isoformat()}]", *args)
+
+    def log_meta(self, msg):
+        print(msg)
+
+    def log_event(self, msg, event):
+        print(f"""{msg} Event: type = {event['type']}, id = {event['event_id']}""")
+        self.debug_logfile.write(f"""{msg} Event: type = {event['type']}, id = {event['event_id']}, event = {event}\n""")
 
     async def connect(self, model='gpt-4o-realtime-preview-2024-10-01'):
         if self.is_connected():
@@ -115,6 +123,7 @@ class RealtimeAPI(RealtimeEventHandler):
             'OpenAI-Beta': 'realtime=v1'
         })
         self.log(f"Connected to {self.url}")
+        self.log_meta(f"Connected to {self.url}")
         asyncio.create_task(self._receive_messages())
 
     async def _receive_messages(self):
@@ -123,6 +132,7 @@ class RealtimeAPI(RealtimeEventHandler):
             if event['type'] == "error":
                 logger.error("ERROR", event)
             self.log("received:", event)
+            self.log_event("received: ",event)
             self.dispatch(f"server.{event['type']}", event)
             self.dispatch("server.*", event)
 
@@ -140,16 +150,19 @@ class RealtimeAPI(RealtimeEventHandler):
         self.dispatch(f"client.{event_name}", event)
         self.dispatch("client.*", event)
         self.log("sent:", event)
+        self.log_event("sent: ", event)
         await self.ws.send(json.dumps(event))
 
     def _generate_id(self, prefix):
         return f"{prefix}{int(datetime.utcnow().timestamp() * 1000)}"
 
     async def disconnect(self):
+        self.debug_logfile.close()
         if self.ws:
             await self.ws.close()
             self.ws = None
             self.log(f"Disconnected from {self.url}")
+        
 
 class RealtimeConversation:
     default_frequency = config.features.audio.sample_rate
@@ -470,6 +483,7 @@ class RealtimeClient(RealtimeEventHandler):
             if not tool_config:
                 raise Exception(f'Tool "{tool["name"]}" has not been added')
             result = await tool_config["handler"](**json_arguments)
+            print(f" Calling tool with arguments: f{json_arguments}, name = {tool_config}")
             await self.realtime.send("conversation.item.create", {
                 "item": {
                     "type": "function_call_output",
@@ -531,6 +545,7 @@ class RealtimeClient(RealtimeEventHandler):
         if not callable(handler):
             raise Exception(f'Tool "{name}" handler must be a function')
         self.tools[name] = {"definition": definition, "handler": handler}
+        print(f" Adding tool {definition}, handler = {handler}")
         await self.update_session()
         return self.tools[name]
 
