@@ -1,4 +1,4 @@
-
+import os
 from video_processing.video_rag import VideoRag
 
 from llama_index.core.schema import ImageNode, ImageDocument
@@ -39,14 +39,19 @@ class VideoRagQdrant(VideoRag):
 
 
         for node in img_nodes:
+            relative_file_path = node.metadata["file_path"].split('events_kb/', 1)[1]
+            new_img_path = os.path.join('events_kb', relative_file_path)
+            node.metadata["file_path"] = new_img_path
             img_docs.append(ImageDocument(text=node.text, image_mimetype=node.image_mimetype, metadata=node.metadata))
 
         for node in text_nodes:
+            relative_file_path = node.metadata["file_path"].split('events_kb/', 1)[1]
+            new_text_path = os.path.join('events_kb', relative_file_path)
             text_docs.append(
                 {
                     'text': node.text,
                     'file_name': node.metadata['file_name'],
-                    'file_path': node.metadata['file_path'],
+                    'file_path': new_text_path,
                     'timestamps': node.metadata['timestamps']
                 }
             )
@@ -57,6 +62,8 @@ class VideoRagQdrant(VideoRag):
         for node in text_only_results:
             print(node)
             print(node.metadata)
+            relative_file_path = node.metadata["file_path"].split('events_kb/', 1)[1]
+            new_text_path = os.path.join('events_kb', relative_file_path)
             text_docs.append(
                 {
                     'text': node.text,
