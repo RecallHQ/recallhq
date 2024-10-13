@@ -1,0 +1,15 @@
+# Follow logs in realtime
+# sudo journalctl -f --unit=immersive_mode 
+[Unit]
+Description=Service to run the RecallHQ Immersive Mode startup script
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/llm_bootcamp/recallhq
+ExecStart=/bin/bash -c 'cd /home/ubuntu/llm_bootcamp/recallhq && source .venv/bin/activate && chainlit run immersive_chainlit.py -w --port 8080 -h'
+# optional items below
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
