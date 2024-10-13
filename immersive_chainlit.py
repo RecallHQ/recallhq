@@ -94,6 +94,7 @@ async def start():
     if not cl.user_session.get("futures"):
         cl.user_session.set("futures", {})
 
+    media_labels = []
     for media_label in cl.user_session.get("knowledge_base").keys():
         if media_label not in cl.user_session.get("indexes") and media_label not in cl.user_session.get("futures"):
             # TODO: Remove the following if block after the Demo
@@ -103,8 +104,15 @@ async def start():
             tp_executor = ThreadPoolExecutor(max_workers=1)
             future = tp_executor.submit(create_new_index, media_label)
             cl.user_session.get("futures")[media_label] = [future, tp_executor]
+            media_labels.append(media_label)
         else:
             print(f"Index for {media_label} exists in future or index")
+
+    for media_label in media_labels:
+        print(f"Processing index update for {media_label}")
+        vs_future, tp_executor = cl.user_session.get("futures").pop(media_label)
+        cl.user_session.get("indexes")[media_label] = vs_future.result()
+
 
 @cl.on_message
 async def on_message(message: cl.Message):

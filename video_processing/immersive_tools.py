@@ -104,6 +104,7 @@ lookup_events_in_kb_def =  {
 
 async def lookup_events_in_kb_handler():
     events = []
+    response_str = "Here are the list of events currently in the knowledge base"
     for media_label, event_data in cl.user_session.get("knowledge_base").items():
         if event_data.get("title_image"):
             image_path = os.path.join(os.getcwd(), event_data.get("title_image"))
@@ -116,14 +117,14 @@ async def lookup_events_in_kb_handler():
           content=media_label, elements=[image]
         ).send()
         events.append(media_label)
-    return ', '.join(events)
+    return response_str
     
     
     
 lookup_events_in_kb = (lookup_events_in_kb_def, lookup_events_in_kb_handler)
 
 
-# Select event too
+# Select event tool
 select_event_def =  {
     "name": "select_event",
     "description": "Select an event from the knowledge base to find more information about the event. This tool is used when the user selects an event from the knowledge.",
@@ -143,7 +144,7 @@ async def select_event_handler(media_label: str):
 
     event_data = cl.user_session.get("knowledge_base")[media_label]
     response_str = f'How can I help you answer your questions about "{media_label}"?'
-    cl.user_session.set("current_event", media_label)
+    cl.user_session.set("media_label", media_label)
 
     if event_data.get("title_image"):
         image_path = os.path.join(os.getcwd(), event_data.get("title_image"))
@@ -155,10 +156,11 @@ async def select_event_handler(media_label: str):
     await cl.Message(
         content=media_label, elements=[image]
     ).send()
-  
+
     return response_str
 
 select_event = (select_event_def, select_event_handler)
+
 ### Query event tool:
 query_event_def =  {
     "name": "query_event",
@@ -166,10 +168,6 @@ query_event_def =  {
     "parameters": {
       "type": "object",
       "properties": {
-        "media_label": {
-          "type": "string",
-          "description": "The name of the event."
-        },        
         "query": {
           "type": "string",
           "description": "The actual user's query."
@@ -179,12 +177,52 @@ query_event_def =  {
     }
 }
 
-async def query_event_handler(query: str, media_label: str):
-    random_start = random.uniform(0.0, 10.0)
-    random_delta = random.uniform(0.0, 20.0)
-    random_end = random_start + random_delta
-    await cl.Message("Querying video.").send()
-    return f"The query result is in the video snippet. Use tool calling to play video from {random_start} to {random_end}."
+async def query_event_handler(query: str):
+    media_label = cl.user_session.get("media_label")
+    indexes = cl.user_session.get("indexes") 
+    if media_label not in cl.user_session.get("futures"):
+        return f"Unable to process your request at the moment. Please check again in sometime."
+
+    print(f"Processing query: {query} for {media_label}")
+
+    
+    img_docs, text_docs = search_knowledge_base(query, media_label, indexes)
+    
+    future = tp_executor.submit(get_media_indices, query, text_docs, img_docs, media_label, indexes)
+    response_container = cl.Message("")
+    response_text, function_data  = await get_mm_llm_response(query, text_docs, img_docs, media_label, cl.user_session.get("indexes"), response_container, is_chainlit=True)
+    img_results, text_results = future.result()
+    tp_executor.shutdown()
+
+    if text_results:
+        new_video_path = './temp/video_clips'
+        for doc in text_results[:1]:
+            text_path = doc['file_path']
+            video_path = os.path.join(os.getcwd(), 'temp', 'video_data', Path(text_path).parent.name+'.mp4')
+            start_time = doc['timestamps'][0][0]
+            end_time = doc['timestamps'][-1][-1]
+
+            #video_data = [{'video_file': video_path, 'timestamps': [start_time, end_time]}]
+            #clips, clip_paths = generate_videoclips(new_video_path, video_data)
+            #st.video(clip_paths[0])
+            if os.path.exists(video_path):
+                print(f"Adding video: {video_path} from {start_time} to {end_time}")
+                video = cl.Video(name=media_label, url=f"/recall_immersive_video/{video_path}", display="inline")
+                await cl.Message(
+                    content=media_label, elements=[image]
+                ).send()
+                await recallws_fast_forward_onscreen_video(start_time)
+    elif img_results :
+        for doc in img_results:
+            relative_img_path = doc.metadata["file_path"].split('events_kb/', 1)[1]
+            new_img_path = os.path.join('events_kb', relative_img_path)
+            if os.path.exists(new_img_path):
+                image = cl.Image(
+                    path=new_img_path, name=media_label, display="inline")
+                await cl.Message(
+                    content=media_label, elements=[image]
+                ).send()
+    return response_text
 
 query_event = (query_event_def, query_event_handler)
 

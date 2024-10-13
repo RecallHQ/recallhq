@@ -317,10 +317,10 @@ async def update_response_container(response_container, response_text, token):
     response_text.append(token)
     response_container.markdown(''.join(response_text))
 
-async def get_mm_llm_response(query_str, text_docs, img_docs, media_label, session_state, response_container):
+async def get_mm_llm_response(query_str, text_docs, img_docs, media_label, session_state, response_container, is_chainlit=False):
     response_text = []
     function_data = {}
-    video_rag_inst = session_state.indexes[media_label]
+    video_rag_inst = session_state[media_label]
     context = f"The following is the context of the {media_label}. Answer user's questions from the provided text and image documents."
     event_metadata = {
         'text_docs': text_docs,
@@ -329,10 +329,19 @@ async def get_mm_llm_response(query_str, text_docs, img_docs, media_label, sessi
 
     stream = await video_rag_inst.query_with_oai_stream(query_str, context, img_docs, event_metadata=event_metadata)
     async for part in stream:
-        response_text.append(part.delta)
-        response_container.markdown(''.join(response_text))
+        if is_chainlit:
+            await response_container.stream_token(part.delta)
+        else:
+            response_text.append(part.delta)
+            response_container.markdown(''.join(response_text))
 
-    return ''.join(response_text), function_data
+    if is_chainlit:
+        await response_container.update()
+        response_msg = response_container.content
+    else:
+        response_msg = ''.join(response_text)
+
+    return response_msg, function_data
 
 def get_llm_tts_response(text_input):
     audio_response = audio_client.audio.speech.create(

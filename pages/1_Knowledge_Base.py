@@ -132,7 +132,7 @@ async def get_openai_response(user_query):
     # Get images and text index in a separate thread
     tp_executor = ThreadPoolExecutor(max_workers=1)
     future = tp_executor.submit(get_media_indices, user_query, text_docs, img_docs, st.session_state.media_label, st.session_state.indexes)
-    response_text, function_data  = await get_mm_llm_response(user_query, text_docs, img_docs, st.session_state.media_label, st.session_state, response_container)
+    response_text, function_data  = await get_mm_llm_response(user_query, text_docs, img_docs, st.session_state.media_label, st.session_state.indexes, response_container)
     if response_text:
         st.session_state.messages.append({"role": "assistant", "content": response_text})
 
@@ -166,9 +166,9 @@ async def get_openai_response(user_query):
             st.session_state.messages.append({"role": "assistant", "content": response_text})
         else:
             st.session_state.messages.append({"role": "assistant", "content": "This is all the information I could gather for your question."})
-
-    audio_path = get_llm_tts_response(response_text)
-    st.audio(audio_path, autoplay=True)
+    if st.session_state.recording:
+        audio_path = get_llm_tts_response(response_text)
+        st.audio(audio_path, autoplay=True)
     img_results, text_results = future.result()
     tp_executor.shutdown()
 
