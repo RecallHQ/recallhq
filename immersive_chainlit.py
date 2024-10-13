@@ -5,16 +5,16 @@ from openai import AsyncOpenAI
 import chainlit as cl
 from uuid import uuid4
 from chainlit.logger import logger
-from immersive_tools import update_video_message
-from immersive_server import manager
+from video_processing.immersive_tools import update_video_message
+from video_processing.immersive_server import manager
 import sys
 
 
 # REQUIRES: pip install chainlit==2.0.dev0
 # Uses "output_video.mp4" as the video file.
 
-from realtime import RealtimeClient
-from immersive_tools import tools
+from video_processing.realtime import RealtimeClient
+from video_processing.immersive_tools import tools
 
 from dotenv import load_dotenv
 
