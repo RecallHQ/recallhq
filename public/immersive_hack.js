@@ -3,6 +3,8 @@
 // WebSocket connection setup
 let socket = null;
 
+
+
 function connectWebSocket() {
     const wsUrl = `ws://${window.location.host}/ws_recall`; // Connect to the same host as the page
     socket = new WebSocket(wsUrl);
@@ -10,6 +12,12 @@ function connectWebSocket() {
     socket.onopen = function(e) {
         console.log("WebSocket connection established");
         socket.send(JSON.stringify("{msg:'HELLO'}"));
+        setInterval(sendPing, 2000);    
+        
+    };
+
+    function sendPing() {
+        socket.send("ping");
     };
 
     socket.onmessage = function(event) {
