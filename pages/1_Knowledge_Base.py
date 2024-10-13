@@ -6,7 +6,7 @@ import asyncio
 from pathlib import Path
 import speech_recognition as sr
 from concurrent.futures import ThreadPoolExecutor
-from constants import KNOWLEDGE_BASE_PATH
+from constants import KNOWLEDGE_BASE_PATH, demo_media_labels
 from recall_utils import load_state, generate_videoclips
 from rags.text_rag import search_knowledge_base, create_new_index, get_llm_response, get_mm_llm_response, get_media_indices, get_llm_tts_response
 from rags.scraper import perform_web_search
@@ -102,6 +102,9 @@ def record_audio(progress_bar):
 
 for media_label in st.session_state.knowledge_base.keys():
     if media_label not in st.session_state.indexes and media_label not in st.session_state.futures:
+        # TODO: Remove the following if block after the Demo
+        if media_label not in demo_media_labels:
+            continue
         print(f"Index for {media_label} does not exist. Need to add to futures")
         tp_executor = ThreadPoolExecutor(max_workers=1)
         future = tp_executor.submit(create_new_index, media_label)

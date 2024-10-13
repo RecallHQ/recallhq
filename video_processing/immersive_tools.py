@@ -1,8 +1,11 @@
 
 import chainlit as cl
 import random 
-from video_processing.immersive_server import manager
 import json
+import os
+from pathlib import Path
+from rags.text_rag import search_knowledge_base, create_new_index, get_llm_response, get_mm_llm_response, get_media_indices, get_llm_tts_response
+from video_processing.immersive_server import manager
 
 def update_video_message():
     apex_message = cl.user_session.get("apex_message")
@@ -88,13 +91,50 @@ async def update_apex_message():
 Recall tools to be called using the OpenAI realtime api:
 """
 
-### Query video tool:
-query_video_def =  {
-    "name": "query_video",
-    "description": "User's query as a sentence. This tool is used when information from the video is needed to answer the user's questions.",
+### Lookup Events in Knowledge Base Tool:
+lookup_events_in_kb_def =  {
+    "name": "lookup_events_in_kb",
+    "description": "Lookup events in the knowledge base. This tool is used when the knowledge base needs to be looked up for existing events.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+}
+
+async def lookup_events_in_kb_handler():
+    events = []
+    for media_label, event_data in cl.user_session.get("knowledge_base").items():
+        if event_data.get("title_image"):
+            image_path = os.path.join(os.getcwd(), event_data.get("title_image"))
+        else:
+            image_path = f"https://via.placeholder.com/150?text={media_label.replace(' ', '+')}"
+        image = cl.Image(
+          path=image_path, name=media_label, display="inline")
+
+        await cl.Message(
+          content=media_label, elements=[image]
+        ).send()
+        events.append(media_label)
+    return ', '.join(events)
+    
+    
+    
+lookup_events_in_kb = (lookup_events_in_kb_def, lookup_events_in_kb_handler)
+
+
+# sele
+### Query event tool:
+query_event_def =  {
+    "name": "query_event",
+    "description": "User's query as a sentence. This tool is used when information from an event is needed to answer the user's questions.",
     "parameters": {
       "type": "object",
       "properties": {
+        "media_label": {
+          "type": "string",
+          "description": "The name of the event."
+        },        
         "query": {
           "type": "string",
           "description": "The actual user's query."
@@ -104,14 +144,15 @@ query_video_def =  {
     }
 }
 
-async def query_video_handler(query: str):
+async def query_event_handler(query: str, media_label: str):
     random_start = random.uniform(0.0, 10.0)
     random_delta = random.uniform(0.0, 20.0)
     random_end = random_start + random_delta
     await cl.Message("Querying video.").send()
     return f"The query result is in the video snippet. Use tool calling to play video from {random_start} to {random_end}."
 
-query_video = (query_video_def, query_video_handler)
+query_event = (query_event_def, query_event_handler)
+
 
 ### Play video tool:
 play_video_for_interval_def =  {
@@ -213,8 +254,8 @@ async def fast_forward_video_handler(time_delta):
 
 fast_forward_video = (fast_forward_video_def, fast_forward_video_handler)
 
-tools = [play_video_for_interval, query_video, pause_video,
-          play_video, set_fullscreen_video, unset_fullscreen_video, fast_forward_video]
+tools = [play_video_for_interval, query_event, pause_video,
+          play_video, set_fullscreen_video, unset_fullscreen_video, fast_forward_video, lookup_events_in_kb]
 
 #tools = [play_video_for_interval, query_video, pause_video, play_video]
 
