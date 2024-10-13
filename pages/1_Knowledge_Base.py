@@ -192,9 +192,9 @@ async def get_openai_response(user_query):
 
     elif img_results :
         for doc in img_results:
-            relative_img_path = doc.metadata["file_path"].split('events_kb/', 1)[1]
-            new_img_path = os.path.join('events_kb', relative_img_path)
+            new_img_path = doc.metadata["file_path"]
             if os.path.exists(new_img_path):
+                print(f"Displaying image for: {new_img_path}")
                 st.image(new_img_path)
                 st.session_state.messages.append({"role": "assistant", "content": new_img_path, "is_image": True})
 
