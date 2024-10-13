@@ -123,7 +123,42 @@ async def lookup_events_in_kb_handler():
 lookup_events_in_kb = (lookup_events_in_kb_def, lookup_events_in_kb_handler)
 
 
-# sele
+# Select event too
+select_event_def =  {
+    "name": "select_event",
+    "description": "Select an event from the knowledge base to find more information about the event. This tool is used when the user selects an event from the knowledge.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "media_label": {
+          "type": "string",
+          "description": "The name of the event."
+        },
+      },
+      "required": ["media_label",]
+    }
+}
+
+async def select_event_handler(media_label: str):
+
+    event_data = cl.user_session.get("knowledge_base")[media_label]
+    response_str = f'How can I help you answer your questions about "{media_label}"?'
+    cl.user_session.set("current_event", media_label)
+
+    if event_data.get("title_image"):
+        image_path = os.path.join(os.getcwd(), event_data.get("title_image"))
+    else:
+        image_path = f"https://via.placeholder.com/150?text={media_label.replace(' ', '+')}"
+    image = cl.Image(
+        path=image_path, name=media_label, display="inline")
+
+    await cl.Message(
+        content=media_label, elements=[image]
+    ).send()
+  
+    return response_str
+
+select_event = (select_event_def, select_event_handler)
 ### Query event tool:
 query_event_def =  {
     "name": "query_event",
@@ -254,8 +289,9 @@ async def fast_forward_video_handler(time_delta):
 
 fast_forward_video = (fast_forward_video_def, fast_forward_video_handler)
 
-tools = [play_video_for_interval, query_event, pause_video,
-          play_video, set_fullscreen_video, unset_fullscreen_video, fast_forward_video, lookup_events_in_kb]
+tools = [play_video_for_interval, pause_video, play_video,
+         set_fullscreen_video, unset_fullscreen_video, fast_forward_video,
+         lookup_events_in_kb, select_event, query_event]
 
 #tools = [play_video_for_interval, query_video, pause_video, play_video]
 
