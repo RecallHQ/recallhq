@@ -1,5 +1,6 @@
 import os
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from openai import AsyncOpenAI
 
 import chainlit as cl
@@ -7,6 +8,9 @@ from uuid import uuid4
 from chainlit.logger import logger
 from video_processing.immersive_tools import update_video_message
 from video_processing.immersive_server import manager
+from recall_utils import load_state
+from rags.text_rag import create_new_index
+from constants import KNOWLEDGE_BASE_PATH, demo_media_labels
 import sys
 
 
@@ -24,7 +28,7 @@ client = AsyncOpenAI()
 
 async def setup_openai_realtime():
     """Instantiate and configure the OpenAI Realtime Client"""
-    openai_realtime = RealtimeClient(api_key=os.getenv("OPENAI_API_KEY"))
+    openai_realtime = RealtimeClient(api_key=os.getenv("OPENAI_API_KEY_REALTIME"))
     cl.user_session.set("track_id", str(uuid4()))
     async def handle_conversation_updated(event):
         item = event.get("item")
@@ -71,17 +75,44 @@ async def setup_openai_realtime():
 @cl.on_chat_start
 async def start():
     await cl.Message(
-        content="Welcome to Recall. Type or speak a question interactively !"
+        content="You are in the Immersive Mode Beta. Lets try out together!"
     ).send()
-    apex_message = cl.Message("")
-    video = cl.Video(name="output_video", url="/recall_immersive_video/video_processing/output_video.mp4", display="inline")
-    elements = [
-          video,
-      ]
-    apex_message.elements = elements
-    cl.user_session.set("apex_message", apex_message)
-    await apex_message.send()
+    # apex_message = cl.Message("")
+    # video = cl.Video(name="output_video", url="/recall_immersive_video/video_processing/output_video.mp4", display="inline")
+    # elements = [
+    #       video,
+    #   ]
+    # apex_message.elements = elements
+    # cl.user_session.set("apex_message", apex_message)
+    # await apex_message.send()
     await setup_openai_realtime()
+
+    if not cl.user_session.get("knowledge_base"):
+        cl.user_session.set("knowledge_base", load_state(KNOWLEDGE_BASE_PATH))
+    if not cl.user_session.get("indexes"):
+        cl.user_session.set("indexes", {})
+    if not cl.user_session.get("futures"):
+        cl.user_session.set("futures", {})
+
+    media_labels = []
+    for media_label in cl.user_session.get("knowledge_base").keys():
+        if media_label not in cl.user_session.get("indexes") and media_label not in cl.user_session.get("futures"):
+            # TODO: Remove the following if block after the Demo
+            if media_label not in demo_media_labels:
+                continue
+            print(f"Index for {media_label} does not exist. Need to add to futures")
+            tp_executor = ThreadPoolExecutor(max_workers=1)
+            future = tp_executor.submit(create_new_index, media_label)
+            cl.user_session.get("futures")[media_label] = [future, tp_executor]
+            media_labels.append(media_label)
+        else:
+            print(f"Index for {media_label} exists in future or index")
+
+    for media_label in media_labels:
+        print(f"Processing index update for {media_label}")
+        vs_future, tp_executor = cl.user_session.get("futures").pop(media_label)
+        cl.user_session.get("indexes")[media_label] = vs_future.result()
+
 
 @cl.on_message
 async def on_message(message: cl.Message):

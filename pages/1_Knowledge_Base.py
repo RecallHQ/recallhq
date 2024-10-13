@@ -6,7 +6,7 @@ import asyncio
 from pathlib import Path
 import speech_recognition as sr
 from concurrent.futures import ThreadPoolExecutor
-from constants import KNOWLEDGE_BASE_PATH
+from constants import KNOWLEDGE_BASE_PATH, demo_media_labels
 from recall_utils import load_state, generate_videoclips
 from rags.text_rag import search_knowledge_base, create_new_index, get_llm_response, get_mm_llm_response, get_media_indices, get_llm_tts_response
 from rags.scraper import perform_web_search
@@ -102,6 +102,9 @@ def record_audio(progress_bar):
 
 for media_label in st.session_state.knowledge_base.keys():
     if media_label not in st.session_state.indexes and media_label not in st.session_state.futures:
+        # TODO: Remove the following if block after the Demo
+        if media_label not in demo_media_labels:
+            continue
         print(f"Index for {media_label} does not exist. Need to add to futures")
         tp_executor = ThreadPoolExecutor(max_workers=1)
         future = tp_executor.submit(create_new_index, media_label)
@@ -129,7 +132,7 @@ async def get_openai_response(user_query):
     # Get images and text index in a separate thread
     tp_executor = ThreadPoolExecutor(max_workers=1)
     future = tp_executor.submit(get_media_indices, user_query, text_docs, img_docs, st.session_state.media_label, st.session_state.indexes)
-    response_text, function_data  = await get_mm_llm_response(user_query, text_docs, img_docs, st.session_state.media_label, st.session_state, response_container)
+    response_text, function_data  = await get_mm_llm_response(user_query, text_docs, img_docs, st.session_state.media_label, st.session_state.indexes, response_container)
     if response_text:
         st.session_state.messages.append({"role": "assistant", "content": response_text})
 
@@ -163,9 +166,9 @@ async def get_openai_response(user_query):
             st.session_state.messages.append({"role": "assistant", "content": response_text})
         else:
             st.session_state.messages.append({"role": "assistant", "content": "This is all the information I could gather for your question."})
-
-    audio_path = get_llm_tts_response(response_text)
-    st.audio(audio_path, autoplay=True)
+    if st.session_state.recording:
+        audio_path = get_llm_tts_response(response_text)
+        st.audio(audio_path, autoplay=True)
     img_results, text_results = future.result()
     tp_executor.shutdown()
 

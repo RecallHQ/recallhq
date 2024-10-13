@@ -1,0 +1,8 @@
+a[href*='https://github.com/Chainlit/chainlit'] {
+    visibility: hidden;
+    display: none;
+}
+
+.css-1705j0v, .css-bsxkxw, .css-kjafn5 {
+    display: none !important;
+}

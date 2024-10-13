@@ -98,7 +98,8 @@ class RealtimeAPI(RealtimeEventHandler):
         super().__init__()
         self.default_url = 'wss://api.openai.com/v1/realtime'
         self.url = url or self.default_url
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY_REALTIME")
+        print(f"Realtime client using API key: {self.api_key}")
         self.ws = None
         self.debug_logfile = open('recall_log_1.log', 'a')
 

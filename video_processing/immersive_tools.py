@@ -1,8 +1,11 @@
 
 import chainlit as cl
 import random 
-from video_processing.immersive_server import manager
 import json
+import os
+from pathlib import Path
+from rags.text_rag import search_knowledge_base, create_new_index, get_llm_response, get_mm_llm_response, get_media_indices, get_llm_tts_response
+from video_processing.immersive_server import manager
 
 def update_video_message():
     apex_message = cl.user_session.get("apex_message")
@@ -88,10 +91,80 @@ async def update_apex_message():
 Recall tools to be called using the OpenAI realtime api:
 """
 
-### Query video tool:
-query_video_def =  {
-    "name": "query_video",
-    "description": "User's query as a sentence. This tool is used when information from the video is needed to answer the user's questions.",
+### Lookup Events in Knowledge Base Tool:
+lookup_events_in_kb_def =  {
+    "name": "lookup_events_in_kb",
+    "description": "Lookup events in the knowledge base. This tool is used when the knowledge base needs to be looked up for existing events.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+}
+
+async def lookup_events_in_kb_handler():
+    events = []
+    response_str = "Here are the list of events currently in the knowledge base"
+    for media_label, event_data in cl.user_session.get("knowledge_base").items():
+        if event_data.get("title_image"):
+            image_path = os.path.join(os.getcwd(), event_data.get("title_image"))
+        else:
+            image_path = f"https://via.placeholder.com/150?text={media_label.replace(' ', '+')}"
+        image = cl.Image(
+          path=image_path, name=media_label, display="inline")
+
+        await cl.Message(
+          content=media_label, elements=[image]
+        ).send()
+        events.append(media_label)
+    return response_str
+    
+    
+    
+lookup_events_in_kb = (lookup_events_in_kb_def, lookup_events_in_kb_handler)
+
+
+# Select event tool
+select_event_def =  {
+    "name": "select_event",
+    "description": "Select an event from the knowledge base to find more information about the event. This tool is used when the user selects an event from the knowledge.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "media_label": {
+          "type": "string",
+          "description": "The name of the event."
+        },
+      },
+      "required": ["media_label",]
+    }
+}
+
+async def select_event_handler(media_label: str):
+
+    event_data = cl.user_session.get("knowledge_base")[media_label]
+    response_str = f'How can I help you answer your questions about "{media_label}"?'
+    cl.user_session.set("media_label", media_label)
+
+    if event_data.get("title_image"):
+        image_path = os.path.join(os.getcwd(), event_data.get("title_image"))
+    else:
+        image_path = f"https://via.placeholder.com/150?text={media_label.replace(' ', '+')}"
+    image = cl.Image(
+        path=image_path, name=media_label, display="inline")
+
+    await cl.Message(
+        content=media_label, elements=[image]
+    ).send()
+
+    return response_str
+
+select_event = (select_event_def, select_event_handler)
+
+### Query event tool:
+query_event_def =  {
+    "name": "query_event",
+    "description": "User's query as a sentence. This tool is used when information from an event is needed to answer the user's questions.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -104,14 +177,55 @@ query_video_def =  {
     }
 }
 
-async def query_video_handler(query: str):
-    random_start = random.uniform(0.0, 10.0)
-    random_delta = random.uniform(0.0, 20.0)
-    random_end = random_start + random_delta
-    await cl.Message("Querying video.").send()
-    return f"The query result is in the video snippet. Use tool calling to play video from {random_start} to {random_end}."
+async def query_event_handler(query: str):
+    media_label = cl.user_session.get("media_label")
+    indexes = cl.user_session.get("indexes") 
+    if media_label not in cl.user_session.get("futures"):
+        return f"Unable to process your request at the moment. Please check again in sometime."
 
-query_video = (query_video_def, query_video_handler)
+    print(f"Processing query: {query} for {media_label}")
+
+    
+    img_docs, text_docs = search_knowledge_base(query, media_label, indexes)
+    
+    future = tp_executor.submit(get_media_indices, query, text_docs, img_docs, media_label, indexes)
+    response_container = cl.Message("")
+    response_text, function_data  = await get_mm_llm_response(query, text_docs, img_docs, media_label, cl.user_session.get("indexes"), response_container, is_chainlit=True)
+    img_results, text_results = future.result()
+    tp_executor.shutdown()
+
+    if text_results:
+        new_video_path = './temp/video_clips'
+        for doc in text_results[:1]:
+            text_path = doc['file_path']
+            video_path = os.path.join(os.getcwd(), 'temp', 'video_data', Path(text_path).parent.name+'.mp4')
+            start_time = doc['timestamps'][0][0]
+            end_time = doc['timestamps'][-1][-1]
+
+            #video_data = [{'video_file': video_path, 'timestamps': [start_time, end_time]}]
+            #clips, clip_paths = generate_videoclips(new_video_path, video_data)
+            #st.video(clip_paths[0])
+            if os.path.exists(video_path):
+                print(f"Adding video: {video_path} from {start_time} to {end_time}")
+                video = cl.Video(name=media_label, url=f"/recall_immersive_video/{video_path}", display="inline")
+                await cl.Message(
+                    content=media_label, elements=[image]
+                ).send()
+                await recallws_fast_forward_onscreen_video(start_time)
+    elif img_results :
+        for doc in img_results:
+            relative_img_path = doc.metadata["file_path"].split('events_kb/', 1)[1]
+            new_img_path = os.path.join('events_kb', relative_img_path)
+            if os.path.exists(new_img_path):
+                image = cl.Image(
+                    path=new_img_path, name=media_label, display="inline")
+                await cl.Message(
+                    content=media_label, elements=[image]
+                ).send()
+    return response_text
+
+query_event = (query_event_def, query_event_handler)
+
 
 ### Play video tool:
 play_video_for_interval_def =  {
@@ -213,8 +327,9 @@ async def fast_forward_video_handler(time_delta):
 
 fast_forward_video = (fast_forward_video_def, fast_forward_video_handler)
 
-tools = [play_video_for_interval, query_video, pause_video,
-          play_video, set_fullscreen_video, unset_fullscreen_video, fast_forward_video]
+tools = [play_video_for_interval, pause_video, play_video,
+         set_fullscreen_video, unset_fullscreen_video, fast_forward_video,
+         lookup_events_in_kb, select_event, query_event]
 
 #tools = [play_video_for_interval, query_video, pause_video, play_video]
 
