@@ -21,7 +21,7 @@ botocore==1.35.29
 cachetools==5.5.0
 certifi==2024.8.30
 cffi==1.17.1
-chainlit==1.2.0
+chainlit @ https://github.com/RecallHQ/recall_chainlit/raw/refs/heads/main/chainlit-2.0.dev1-py3-none-any.whl#sha256=5b85f472418136a24c8950a33cc7848c38122652f76666827ebdb13a733dd807
 charset-normalizer==3.3.2
 chevron==0.14.0
 click==8.1.7
@@ -110,7 +110,7 @@ langchain-text-splitters==0.3.0
 langfuse==2.51.2
 langsmith==0.1.129
 Lazify==0.4.0
-literalai==0.0.607
+literalai==0.0.623
 llama-index-core==0.11.14
 llama-index-embeddings-clip==0.2.0
 llama-index-embeddings-fastembed==0.2.0
