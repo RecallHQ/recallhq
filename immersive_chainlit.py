@@ -1,6 +1,5 @@
 import os
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 from openai import AsyncOpenAI
 
 import chainlit as cl
@@ -10,7 +9,7 @@ from video_processing.immersive_tools import update_video_message
 from video_processing.immersive_server import manager
 from recall_utils import load_state
 from rags.text_rag import create_new_index
-from constants import KNOWLEDGE_BASE_PATH, demo_media_labels
+from constants import KNOWLEDGE_BASE_PATH, immersive_demo_labels
 import sys
 
 
@@ -95,24 +94,14 @@ async def start():
         cl.user_session.set("futures", {})
 
     media_labels = []
-    for media_label in cl.user_session.get("knowledge_base").keys():
-        if media_label not in cl.user_session.get("indexes") and media_label not in cl.user_session.get("futures"):
+
+    for media_label in immersive_demo_labels:
+        if media_label not in cl.user_session.get("indexes"):
             # TODO: Remove the following if block after the Demo
-            if media_label not in demo_media_labels:
-                continue
-            print(f"Index for {media_label} does not exist. Need to add to futures")
-            tp_executor = ThreadPoolExecutor(max_workers=1)
-            future = tp_executor.submit(create_new_index, media_label)
-            cl.user_session.get("futures")[media_label] = [future, tp_executor]
-            media_labels.append(media_label)
+            print(f"Index for {media_label} does not exist. Need to create or load one.")
+            cl.user_session.get("indexes")[media_label] = create_new_index(media_label)
         else:
             print(f"Index for {media_label} exists in future or index")
-
-    for media_label in media_labels:
-        print(f"Processing index update for {media_label}")
-        vs_future, tp_executor = cl.user_session.get("futures").pop(media_label)
-        cl.user_session.get("indexes")[media_label] = vs_future.result()
-
 
 @cl.on_message
 async def on_message(message: cl.Message):

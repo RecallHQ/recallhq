@@ -53,9 +53,12 @@ async def recallws_update_onscreen_video(start_time, end_time):
 
 async def recallws_fast_forward_onscreen_video(delta_time):
     web_socket = cl.user_session.get("recall_websocket", None)
+    json_message = recallws_fast_forward_msg(delta_time)
     if web_socket:
-        json_message = recallws_fast_forward_msg(delta_time)
         await manager.send_message(json.dumps(json_message), web_socket)
+    else:
+        print(f"Error: websocket doesnt exist. Could not fast forward to: {delta_time}")
+        await manager.broadcast(json.dumps(json_message))
 
 async def recallws_play_video():
     web_socket = cl.user_session.get("recall_websocket", None)
@@ -223,8 +226,7 @@ async def query_event_handler(query: str, event_name: str):
                 await cl.Message(
                     content=media_label, elements=[video]
                 ).send()
-                await recallws_fast_forward_onscreen_video(start_time)
-        system_prompt_video = system_prompt_text + "The user is also being shown a video. Use tool calling to play the video once the response has been read out."    
+        system_prompt_video = f"Here is the response to the query to be conveyed to the user: {response_text}. Use the tool calling to fast forward the video to {start_time}."    
         return system_prompt_video
     elif img_results:
         img_count = 0
