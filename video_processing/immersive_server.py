@@ -1,7 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from typing import List
 from chainlit.server import app, router
-import chainlit as cl
 
 # WebSocket manager to handle multiple connections
 class ConnectionManager:

@@ -1,7 +1,7 @@
 
 import chainlit as cl
 import random 
-from immersive_server import manager
+from video_processing.immersive_server import manager
 import json
 
 def update_video_message():
@@ -9,7 +9,7 @@ def update_video_message():
     if cl.user_session.get("event_video"):
       video = cl.user_session.get("event_video")
     else:
-        video = cl.Video(name="output_video.mp4", path="./recall_immersive_video", display="inline")
+        video = cl.Video(name="output_video.mp4", path="./recall_immersive_video/output_video.mp4", display="inline")
         cl.user_session.set("event_video", video)
     video.player_config = {"playing": True}
     elements = [
