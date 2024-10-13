@@ -132,8 +132,8 @@ class RealtimeAPI(RealtimeEventHandler):
             event = json.loads(message)
             if event['type'] == "error":
                 logger.error("ERROR", event)
-            self.log("received:", event)
-            self.log_event("received: ",event)
+            #self.log("received:", event)
+            #self.log_event("received: ",event)
             self.dispatch(f"server.{event['type']}", event)
             self.dispatch("server.*", event)
 
@@ -150,8 +150,8 @@ class RealtimeAPI(RealtimeEventHandler):
         }
         self.dispatch(f"client.{event_name}", event)
         self.dispatch("client.*", event)
-        self.log("sent:", event)
-        self.log_event("sent: ", event)
+        #self.log("sent:", event)
+        #self.log_event("sent: ", event)
         await self.ws.send(json.dumps(event))
 
     def _generate_id(self, prefix):
@@ -484,7 +484,7 @@ class RealtimeClient(RealtimeEventHandler):
             if not tool_config:
                 raise Exception(f'Tool "{tool["name"]}" has not been added')
             result = await tool_config["handler"](**json_arguments)
-            print(f" Calling tool with arguments: f{json_arguments}, name = {tool_config}")
+            print(f" Calling tool with arguments: f{json_arguments}, name = {tool_config}, result = {result}")
             await self.realtime.send("conversation.item.create", {
                 "item": {
                     "type": "function_call_output",
