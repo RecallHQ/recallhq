@@ -4,6 +4,7 @@ import random
 import json
 import os
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 from rags.text_rag import search_knowledge_base, create_new_index, get_llm_response, get_mm_llm_response, get_media_indices, get_llm_tts_response
 from video_processing.immersive_server import manager
 
@@ -104,7 +105,9 @@ lookup_events_in_kb_def =  {
 
 async def lookup_events_in_kb_handler():
     events = []
-    response_str = "Here are the list of events currently in the knowledge base"
+    response_str = "Here are the list of events currently in the knowledge base. Would you like to know more about a particular event?"
+    system_prompt = f"The user is being shown a list of events. Read out the following response to the user:\n {response_str}"
+
     for media_label, event_data in cl.user_session.get("knowledge_base").items():
         if event_data.get("title_image"):
             image_path = os.path.join(os.getcwd(), event_data.get("title_image"))
@@ -117,7 +120,7 @@ async def lookup_events_in_kb_handler():
           content=media_label, elements=[image]
         ).send()
         events.append(media_label)
-    return response_str
+    return system_prompt
     
     
     
@@ -143,8 +146,11 @@ select_event_def =  {
 async def select_event_handler(media_label: str):
 
     event_data = cl.user_session.get("knowledge_base")[media_label]
-    response_str = f'How can I help you answer your questions about "{media_label}"?'
+    response_str = f"How can I help you answer your questions about {media_label}?"
+    system_prompt = f"The user is being shown a select event. Read out the following response to the user:\n {response_str}"
+
     cl.user_session.set("media_label", media_label)
+    print(f"Setting media label: {media_label} for further queries")
 
     if event_data.get("title_image"):
         image_path = os.path.join(os.getcwd(), event_data.get("title_image"))
@@ -157,7 +163,7 @@ async def select_event_handler(media_label: str):
         content=media_label, elements=[image]
     ).send()
 
-    return response_str
+    return system_prompt
 
 select_event = (select_event_def, select_event_handler)
 
@@ -172,28 +178,34 @@ query_event_def =  {
           "type": "string",
           "description": "The actual user's query."
         },
+        "event_name": {
+          "type": "string",
+          "description": "The event name user's query applies to."
+        },
       },
       "required": ["query",]
     }
 }
 
-async def query_event_handler(query: str):
+async def query_event_handler(query: str, event_name: str):
     media_label = cl.user_session.get("media_label")
     indexes = cl.user_session.get("indexes") 
-    if media_label not in cl.user_session.get("futures"):
-        return f"Unable to process your request at the moment. Please check again in sometime."
 
-    print(f"Processing query: {query} for {media_label}")
-
+    print(f"Processing query: {query} for media_label: {media_label} or event_name: {event_name}")
+    if not media_label:
+        media_label = event_name
     
     img_docs, text_docs = search_knowledge_base(query, media_label, indexes)
     
+    tp_executor = ThreadPoolExecutor(max_workers=1)
     future = tp_executor.submit(get_media_indices, query, text_docs, img_docs, media_label, indexes)
     response_container = cl.Message("")
     response_text, function_data  = await get_mm_llm_response(query, text_docs, img_docs, media_label, cl.user_session.get("indexes"), response_container, is_chainlit=True)
     img_results, text_results = future.result()
     tp_executor.shutdown()
 
+    system_prompt_text = f"Here is the response to the query to be conveyed to the user: {response_text}. Read out the response to the user"
+    
     if text_results:
         new_video_path = './temp/video_clips'
         for doc in text_results[:1]:
@@ -209,10 +221,13 @@ async def query_event_handler(query: str):
                 print(f"Adding video: {video_path} from {start_time} to {end_time}")
                 video = cl.Video(name=media_label, url=f"/recall_immersive_video/{video_path}", display="inline")
                 await cl.Message(
-                    content=media_label, elements=[image]
+                    content=media_label, elements=[video]
                 ).send()
                 await recallws_fast_forward_onscreen_video(start_time)
-    elif img_results :
+        system_prompt_video = system_prompt_text + "The user is also being shown a video. Use tool calling to play the video once the response has been read out."    
+        return system_prompt_video
+    elif img_results:
+        img_count = 0
         for doc in img_results:
             relative_img_path = doc.metadata["file_path"].split('events_kb/', 1)[1]
             new_img_path = os.path.join('events_kb', relative_img_path)
@@ -222,7 +237,11 @@ async def query_event_handler(query: str):
                 await cl.Message(
                     content=media_label, elements=[image]
                 ).send()
-    return response_text
+                img_count += 1
+        system_prompt_image = system_prompt_text + f"The user is also being shown {img_count} image(s). Mention that there are some images to view once the response has been read out."
+        return system_prompt_image
+
+    return system_prompt_text
 
 query_event = (query_event_def, query_event_handler)
 
