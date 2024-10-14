@@ -226,7 +226,7 @@ async def query_event_handler(query: str, event_name: str):
                 await cl.Message(
                     content=media_label, elements=[video]
                 ).send()
-        system_prompt_video = f"Here is the response to the query to be conveyed to the user: {response_text}. Use the tool calling to fast forward the video to {start_time}."    
+        system_prompt_video = f"Here is the response to the query to be conveyed to the user: {response_text}. After the response has been read out, use the tool calling to play the video for interval {start_time} to {end_time}."
         return system_prompt_video
     elif img_results:
         img_count = 0
