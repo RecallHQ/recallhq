@@ -5,6 +5,7 @@ import asyncio
 import inspect
 import numpy as np
 import json
+import traceback
 import websockets
 from datetime import datetime
 from collections import defaultdict
@@ -493,6 +494,7 @@ class RealtimeClient(RealtimeEventHandler):
                 }
             })
         except Exception as e:
+            print(traceback.format_exc())
             err_str = json.dumps({"error": str(e)})
             logger.error(f"Tool call error: {err_str}")
             await self.realtime.send("conversation.item.create", {

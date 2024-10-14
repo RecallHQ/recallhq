@@ -12,7 +12,7 @@ function connectWebSocket() {
     socket.onopen = function(e) {
         console.log("WebSocket connection established");
         socket.send(JSON.stringify("{msg:'HELLO'}"));
-        setInterval(sendPing, 2000);    
+        //setInterval(sendPing, 2000);    
         
     };
 
