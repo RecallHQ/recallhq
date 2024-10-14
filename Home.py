@@ -35,8 +35,8 @@ getstarted_prompt = "Ready to explore the endless possibilities of AI? Let's get
 
 
 #st.title(home_title)
-st.markdown(f"""# {home_title} <span style=color:#2E9BF5><font size=5>Beta</font></span>""",unsafe_allow_html=True)
-
+#st.markdown(f"""# {home_title} <span style=color:#2E9BF5><font size=5>Beta</font></span>""",unsafe_allow_html=True)
+st.markdown(f"""# {home_title} <span style=color:#2E9BF5></span>""",unsafe_allow_html=True)
 st.markdown("""\n""")
 st.markdown("#### Greetings")
 st.write(home_introduction)
