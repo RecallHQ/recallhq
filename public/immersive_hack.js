@@ -6,13 +6,14 @@ let socket = null;
 
 
 function connectWebSocket() {
-    const wsUrl = `ws://${window.location.host}/ws_recall`; // Connect to the same host as the page
+    const wsUrl = `wss://${window.location.host}/ws_recall`; // Connect to the same host as the page
     socket = new WebSocket(wsUrl);
+    timer_handle = null
 
     socket.onopen = function(e) {
         console.log("WebSocket connection established");
         socket.send(JSON.stringify("{msg:'HELLO'}"));
-        //setInterval(sendPing, 2000);    
+        timer_handle = setInterval(sendPing, 3000);    
         
     };
 
@@ -30,10 +31,18 @@ function connectWebSocket() {
         console.log("WebSocket connection closed:", event);
         // Attempt to reconnect after a delay
         setTimeout(connectWebSocket, 5000);
+	if (timer_handle != null) {
+		clearInterval(timer_handle);
+		timer_handle = null;
+	}
     };
 
     socket.onerror = function(error) {
         console.error("WebSocket error:", error);
+	if (timer_handle != null) {
+		clearInterval(timer_handle);
+		timer_handle = null;
+	}
     };
 }
 
@@ -95,10 +104,10 @@ function handleUpdateVideoInterval(message) {
         end_time = message.end;
         videoElement.currentTime = start_time;
         videoElement.play();
-        video.addEventListener('timeupdate', function () {
-            if (video.currentTime >= end_time) {
-                video.pause();  // Stop the video at the end time
-                video.currentTime = end_time;  // Optionally reset the time to endTime
+        videoElement.addEventListener('timeupdate', function () {
+            if (videoElement.currentTime >= end_time) {
+                videoElement.pause();  // Stop the video at the end time
+                videoElement.currentTime = end_time;  // Optionally reset the time to endTime
             }
         });
     }
@@ -108,6 +117,7 @@ function handleSetFullscreen(message) {
     const videoElement = document.querySelector('video');
     if (videoElement) {
         videoElement.requestFullscreen();
+        videoElement.webkitRequestFullscreen()();
     }
 }
 
