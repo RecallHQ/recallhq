@@ -1,4 +1,5 @@
 import streamlit as st
+import io
 import json
 import os
 import time
@@ -11,6 +12,7 @@ from recall_utils import load_state, generate_videoclips
 from rags.text_rag import search_knowledge_base, create_new_index, get_llm_response, get_mm_llm_response, get_media_indices, get_llm_tts_response
 from rags.scraper import perform_web_search
 from streamlit_extras.bottom_container import bottom
+from streamlit_mic_recorder import mic_recorder
 
 
 # CSS for custom styling
@@ -99,6 +101,19 @@ def record_audio(progress_bar):
     transcript = recognize_speech_with_whisper(progress_bar)
 
     return transcript
+
+def process_audio(progress_bar, audio_input):
+    #sound_bytes = io.BytesIO(audio_input['bytes'])
+    audio_filename = 'temp.wav'
+    with open(audio_filename, 'wb') as f:
+        f.write(audio_input['bytes'])
+    with sr.AudioFile(audio_filename) as source:
+        progress_bar.progress(30, text="Processing audio...")
+        audio_data = st.session_state.recognizer.record(source)
+        progress_bar.progress(35, text="Transcribing...")
+        text = st.session_state.recognizer.recognize_whisper(audio_data)
+        progress_bar.progress(100, text="Audio transcribed...")
+    return text    
 
 for media_label in st.session_state.knowledge_base.keys():
     if media_label not in st.session_state.indexes and media_label not in st.session_state.futures:
@@ -308,7 +323,7 @@ if st.session_state.phase == "chat":
     # Display text input and mic
     with bottom():
         progress_bar  = st.empty()
-        col1, col2 = st.columns([0.95, 0.05])
+        col1, col2 = st.columns([0.9, 0.1])
         with col1:
             # Create a chat input, which will automatically be at the bottom
             user_input = st.chat_input("Type or record your question...")
@@ -316,13 +331,21 @@ if st.session_state.phase == "chat":
         with col2:
             button_text = ""
             print("Coming to bottom container")
-            record_button = st.button(button_text, icon='🎤', type="primary")
-            if record_button:
-                progress_bar.progress(0, text="Processing Audio...")
-                user_input = record_audio(progress_bar)
+           
+            audio_input = mic_recorder(start_prompt="🎤", stop_prompt="⏹️", format="wav", key='st_recorder')
+            if audio_input:
+                progress_bar.progress(0, text="Processing audio...")
+                user_input = process_audio(progress_bar, audio_input)
                 print("Result from Audio Processing: ", user_input)
                 progress_bar.empty()
                 st.session_state.recording = True
+            #record_button = st.button(button_text, icon='🎤', type="primary")
+            # if record_button:
+            #     progress_bar.progress(0, text="Processing Audio...")
+            #     user_input = record_audio(progress_bar)
+            #     print("Result from Audio Processing: ", user_input)
+            #     progress_bar.empty()
+            #     st.session_state.recording = True
 
     if user_input:
         loop = asyncio.new_event_loop()

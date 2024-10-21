@@ -27,22 +27,22 @@ render_cta()
 
 # T
 home_title = "RecallHQ"
-home_introduction = "Welcome to RecallHQ, where the power of LLM technology is at your fingertips. Upload a video or Youtube link to a video. Then interact with pre-trained AI Assistant in the Event Q&A. Whether you need to ask questions about the event, or generate summaries, RecallHQ has you covered. Let's start exploring the endless possibilities!"
-home_privacy = "At RecallHQ, your privacy is our top priority. We use OpenAI's Whisper API to extract audio from videos and Youtube links. We do not store any data beyond what is required to process the audio and generate summaries."
+home_introduction = "Welcome to RecallHQ, where the power of LLM technology is at your fingertips. Upload a video or Youtube link to a video in the Media Processor. Then interact with our pre-trained AI Assistant in the Knowledge Base of events. Whether you need to ask questions about the event, or generate summaries, RecallHQ has you covered. Let's start exploring the endless possibilities!"
+#home_privacy = "At RecallHQ, your privacy is our top priority. We use OpenAI's Whisper API to extract audio from videos and Youtube links. We do not store any data beyond what is required to process the audio and generate summaries."
 getstarted_prompt = "Ready to explore the endless possibilities of AI? Let's get started today!"
 
 
 
 
 #st.title(home_title)
-st.markdown(f"""# {home_title} <span style=color:#2E9BF5><font size=5>Beta</font></span>""",unsafe_allow_html=True)
-
+#st.markdown(f"""# {home_title} <span style=color:#2E9BF5><font size=5>Beta</font></span>""",unsafe_allow_html=True)
+st.markdown(f"""# {home_title} <span style=color:#2E9BF5></span>""",unsafe_allow_html=True)
 st.markdown("""\n""")
 st.markdown("#### Greetings")
 st.write(home_introduction)
 
-st.markdown("#### Privacy")
-st.write(home_privacy)
+#st.markdown("#### Privacy")
+#st.write(home_privacy)
 
 st.markdown("""\n""")
 st.markdown("""\n""")

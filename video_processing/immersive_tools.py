@@ -190,10 +190,11 @@ query_event_def =  {
     }
 }
 
-async def query_event_handler(query: str, event_name: str):
+async def query_event_handler(query: str, event_name: str = "Google I/O 2024"):
     media_label = cl.user_session.get("media_label")
     indexes = cl.user_session.get("indexes") 
 
+    media_label = "Google I/O 2024"
     print(f"Processing query: {query} for media_label: {media_label} or event_name: {event_name}")
     if not media_label:
         media_label = event_name
@@ -213,14 +214,14 @@ async def query_event_handler(query: str, event_name: str):
         new_video_path = './temp/video_clips'
         for doc in text_results[:1]:
             text_path = doc['file_path']
-            video_path = os.path.join(os.getcwd(), 'temp', 'video_data', Path(text_path).parent.name+'.mp4')
+            video_path = os.path.join('', 'temp', 'video_data', Path(text_path).parent.name+'.mp4')
             start_time = doc['timestamps'][0][0]
             end_time = doc['timestamps'][-1][-1]
 
             #video_data = [{'video_file': video_path, 'timestamps': [start_time, end_time]}]
             #clips, clip_paths = generate_videoclips(new_video_path, video_data)
             #st.video(clip_paths[0])
-            if os.path.exists(video_path):
+            if os.path.exists(f"./{video_path}"):
                 print(f"Adding video: {video_path} from {start_time} to {end_time}")
                 video = cl.Video(name=media_label, url=f"/recall_immersive_video/{video_path}", display="inline")
                 await cl.Message(

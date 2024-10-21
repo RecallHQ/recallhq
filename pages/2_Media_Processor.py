@@ -78,7 +78,7 @@ def setup_media_processor_page():
 
     with app_header:
         st.title("📝 Media Processor ")
-        st.markdown("##### Extract text from video and audio files")
+        st.markdown("##### Extract video content and create knowledge base for an event")
         
     with file_handler:
         media_label = st.text_input(label="Media Tag", placeholder="Enter a required label or tag to identify the media")

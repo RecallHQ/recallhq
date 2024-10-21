@@ -35,7 +35,7 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()  # Receive data from the WebSocket
-            print(f"Received data:{data}")
+            #print(f"Received data:{data}")
             #await manager.send_message(f"Message text was: {data}", websocket)  # Echo back the received message
             #await manager.broadcast(f"Broadcast: {data}")  # Broadcast the message to all connected clients
     except WebSocketDisconnect:

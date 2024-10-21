@@ -74,7 +74,7 @@ async def setup_openai_realtime():
 @cl.on_chat_start
 async def start():
     await cl.Message(
-        content="You are in the Immersive Mode Beta. Lets try out together!"
+        content="Lets try out the new (Realtime) speech-to-speech experience together!"
     ).send()
     # apex_message = cl.Message("")
     # video = cl.Video(name="output_video", url="/recall_immersive_video/video_processing/output_video.mp4", display="inline")
