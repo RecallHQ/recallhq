@@ -9,8 +9,8 @@ import speech_recognition as sr
 from concurrent.futures import ThreadPoolExecutor
 from constants import KNOWLEDGE_BASE_PATH, demo_media_labels
 from recall_utils import load_state, generate_videoclips
-from rags.text_rag import search_knowledge_base, create_new_index, get_llm_response, get_mm_llm_response, get_media_indices, get_llm_tts_response
-from rags.scraper import perform_web_search
+from video_index.rags.text_rag import search_knowledge_base, create_new_index, get_llm_response, get_mm_llm_response, get_media_indices, get_llm_tts_response
+from video_index.rags.scraper import perform_web_search
 from streamlit_extras.bottom_container import bottom
 from streamlit_mic_recorder import mic_recorder
 
@@ -85,6 +85,18 @@ if "recognizer" not in st.session_state:
 if "recording" not in st.session_state:
        st.session_state.recording = False
 
+for media_label in st.session_state.knowledge_base.keys():
+    if media_label not in st.session_state.indexes and media_label not in st.session_state.futures:
+        # TODO: Remove the following if block after the Demo
+        if media_label not in demo_media_labels:
+            continue
+        print(f"Index for {media_label} does not exist. Need to add to futures")
+        tp_executor = ThreadPoolExecutor(max_workers=1)
+        future = tp_executor.submit(create_new_index, media_label)
+        st.session_state.futures[media_label] = [future, tp_executor]
+    else:
+        print(f"Index for {media_label} exists in future or index")
+        
 def recognize_speech_with_whisper(progress_bar):
     # Use the microphone as the audio source
     with sr.Microphone() as source:
@@ -114,18 +126,6 @@ def process_audio(progress_bar, audio_input):
         text = st.session_state.recognizer.recognize_whisper(audio_data)
         progress_bar.progress(100, text="Audio transcribed...")
     return text    
-
-for media_label in st.session_state.knowledge_base.keys():
-    if media_label not in st.session_state.indexes and media_label not in st.session_state.futures:
-        # TODO: Remove the following if block after the Demo
-        if media_label not in demo_media_labels:
-            continue
-        print(f"Index for {media_label} does not exist. Need to add to futures")
-        tp_executor = ThreadPoolExecutor(max_workers=1)
-        future = tp_executor.submit(create_new_index, media_label)
-        st.session_state.futures[media_label] = [future, tp_executor]
-    else:
-        print(f"Index for {media_label} exists in future or index")
 
 # Function to generate a response from OpenAI GPT-3.5
 async def get_openai_response(user_query):
