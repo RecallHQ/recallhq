@@ -84,7 +84,7 @@ def setup_media_processor_page():
         media_label = st.text_input(label="Media Tag", placeholder="Enter a required label or tag to identify the media")
         youtube_links = st.text_input(label="🔗 YouTube Link(s)",
                                                     placeholder="Enter your YouTube link(s) to download the video and extract the audio")
-        uploaded_media = st.file_uploader("📁 Upload your file", type=['mp4'])
+        uploaded_media = st.file_uploader("📁 Upload your file", type=['mp4'], accept_multiple_files=True)
         submit_button = st.form_submit_button(label="Process Media")
 
         if media_label and submit_button and (youtube_links or uploaded_media):
