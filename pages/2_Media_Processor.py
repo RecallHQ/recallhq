@@ -5,8 +5,8 @@ import streamlit as st
 
 from constants import KNOWLEDGE_BASE_PATH
 from recall_utils import update_state
-from rags.text_rag import save_processed_document, generate_tags_and_images
-from video_processing.ingest_video import save_uploaded_media, Video
+from video_index.rags.text_rag import save_processed_document, generate_tags_and_images
+from video_index.video_processing.ingest_video import save_uploaded_media, Video
 
 
 def provide_post_process_info(media_label, media_paths):
@@ -84,7 +84,7 @@ def setup_media_processor_page():
         media_label = st.text_input(label="Media Tag", placeholder="Enter a required label or tag to identify the media")
         youtube_links = st.text_input(label="🔗 YouTube Link(s)",
                                                     placeholder="Enter your YouTube link(s) to download the video and extract the audio")
-        uploaded_media = st.file_uploader("📁 Upload your file", type=['mp4'])
+        uploaded_media = st.file_uploader("📁 Upload your file", type=['mp4'], accept_multiple_files=True)
         submit_button = st.form_submit_button(label="Process Media")
 
         if media_label and submit_button and (youtube_links or uploaded_media):

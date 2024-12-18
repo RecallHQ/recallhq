@@ -1,6 +1,5 @@
 import os
 import asyncio
-from openai import AsyncOpenAI
 
 import chainlit as cl
 from uuid import uuid4
@@ -22,8 +21,6 @@ from video_processing.immersive_tools import tools
 from dotenv import load_dotenv
 
 load_dotenv()
-
-client = AsyncOpenAI()    
 
 async def setup_openai_realtime():
     """Instantiate and configure the OpenAI Realtime Client"""
