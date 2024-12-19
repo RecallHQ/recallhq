@@ -32,3 +32,4 @@ In order to help quickly understand both the visual content and spoken discussio
     * `source .venv/bin/activate`
 - Run `pip install -r requirements.txt` to install the dependencies
 - Run `streamlit run Home.py` to start the app
+- To enable the Immersive Mode: Run `chainlit run immersive_chainlit.py -w --port 8080` to start the chainlit app before navigating to the immersive mode section in the sidebar. 
