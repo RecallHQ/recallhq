@@ -1,3 +1,4 @@
+# Startup script
 # Follow logs in realtime
 # sudo journalctl -f --unit=immersive_mode 
 [Unit]

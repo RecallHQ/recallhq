@@ -1,6 +1,8 @@
 import streamlit as st 
 import app_utils as vutil 
 
+# Main home page
+
 st.set_page_config(
     page_title="RecallHQ",
     page_icon="recallhq_icon.svg",

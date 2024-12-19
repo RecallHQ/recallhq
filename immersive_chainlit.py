@@ -11,6 +11,7 @@ from rags.text_rag import create_new_index
 from constants import KNOWLEDGE_BASE_PATH, immersive_demo_labels
 import sys
 
+# File is used to support OAI realtime api
 
 # REQUIRES: pip install chainlit==2.0.dev0
 # Uses "output_video.mp4" as the video file.
