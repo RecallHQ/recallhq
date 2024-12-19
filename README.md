@@ -1,7 +1,7 @@
-# **RecallHQ (Tech Event Summarizer & Q&A System)**
+# Recall -- An Agentic system for Interactive Videos
 
 ## **Overview**
-In order to help quickly understand both the visual content and spoken discussion during an event (which are hours long or multi-day), we want to build an assistant that leverages LLMs to summarize recordings, interpret visuals, and answer follow-up questions related to the event. This system would significantly reduce the time needed to review long events, and would event content more accessible and actionable.
+In order to help quickly understand both the visual content and spoken discussion during an event, or an MOOC such as the LLM Agents Berkeley course (which are hours long or multi-day), we want to build an assistant that leverages LLMs to summarize recordings, interpret visuals, and answer follow-up questions related to the event. This system would significantly reduce the time needed to review long events, and would event content more accessible and actionable.
 
 ## **Key Features and Functionality**
 ### **Event Summarization** 
