@@ -3,7 +3,8 @@
 // WebSocket connection setup
 let socket = null;
 
-
+// Websocket connection starts at startup.
+// use wss for secure https like socket, ws otherwise
 
 function connectWebSocket() {
     const wsUrl = `wss://${window.location.host}/ws_recall`; // Connect to the same host as the page
