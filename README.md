@@ -1,5 +1,10 @@
 # Recall -- An Agentic system for Interactive Videos
 
+## VideoIndex package
+
+The core video indexing, knoweldge base creation and video snippet generation logic resides in a separate
+git repo here: https://github.com/RecallHQ/video_index
+
 ## Youtube Demo links
 
 3 minute recording: https://youtu.be/R3Hn2oKCfoo
