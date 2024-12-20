@@ -4,10 +4,10 @@ import asyncio
 import chainlit as cl
 from uuid import uuid4
 from chainlit.logger import logger
-from video_processing.immersive_tools import update_video_message
-from video_processing.immersive_server import manager
+from video_index.video_processing.immersive_tools import update_video_message
+from video_index.video_processing.immersive_server import manager
 from recall_utils import load_state
-from rags.text_rag import create_new_index
+from video_index.rags.text_rag import create_new_index
 from constants import KNOWLEDGE_BASE_PATH, immersive_demo_labels
 import sys
 
@@ -15,8 +15,8 @@ import sys
 # REQUIRES: pip install chainlit==2.0.dev0
 # Uses "output_video.mp4" as the video file.
 
-from video_processing.realtime import RealtimeClient
-from video_processing.immersive_tools import tools
+from video_index.video_processing.realtime import RealtimeClient
+from video_index.video_processing.immersive_tools import tools
 
 from dotenv import load_dotenv
 
@@ -24,7 +24,7 @@ load_dotenv()
 
 async def setup_openai_realtime():
     """Instantiate and configure the OpenAI Realtime Client"""
-    openai_realtime = RealtimeClient(api_key=os.getenv("OPENAI_API_KEY_REALTIME"))
+    openai_realtime = RealtimeClient(api_key=os.getenv("OPENAI_API_KEY"))
     cl.user_session.set("track_id", str(uuid4()))
     async def handle_conversation_updated(event):
         item = event.get("item")

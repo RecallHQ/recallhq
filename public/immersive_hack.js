@@ -6,7 +6,7 @@ let socket = null;
 
 
 function connectWebSocket() {
-    const wsUrl = `wss://${window.location.host}/ws_recall`; // Connect to the same host as the page
+    const wsUrl = `ws://${window.location.host}/ws_recall`; // Connect to the same host as the page
     socket = new WebSocket(wsUrl);
     timer_handle = null
 

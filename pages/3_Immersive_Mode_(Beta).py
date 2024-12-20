@@ -1,7 +1,7 @@
 import streamlit as st
 
 # URL of the Chainlit app
-chainlit_url = "https://recall.autorun.cloud:8080"
+chainlit_url = "http://localhost:8080"
 
 # Set Streamlit page config to have a wide layout
 st.set_page_config(layout="wide")
