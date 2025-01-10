@@ -1,0 +1,14 @@
+events_kb/CES_2024 filter=lfs diff=lfs merge=lfs -text
+events_kb/Data_AI_By_Databricks filter=lfs diff=lfs merge=lfs -text
+events_kb/Google_I_O_2024 filter=lfs diff=lfs merge=lfs -text
+events_kb/LLM_Agents_Course filter=lfs diff=lfs merge=lfs -text
+events_kb/RSA_2024 filter=lfs diff=lfs merge=lfs -text
+events_kb/AI_Engineer_2024 filter=lfs diff=lfs merge=lfs -text
+events_kb/Apple_Events_2024 filter=lfs diff=lfs merge=lfs -text
+events_kb/CES_2025 filter=lfs diff=lfs merge=lfs -text
+events_kb/Confluent_Current_2024 filter=lfs diff=lfs merge=lfs -text
+events_kb/LLM_Bootcamp_2024 filter=lfs diff=lfs merge=lfs -text
+temp/video_data/*.mp4 filter=lfs diff=lfs merge=lfs -binary
+temp/video_data/*.wav filter=lfs diff=lfs merge=lfs -binary
+temp/video_data/*.txt filter=lfs diff=lfs merge=lfs -text
+events_kb/** filter=lfs diff=lfs merge=lfs -binary
