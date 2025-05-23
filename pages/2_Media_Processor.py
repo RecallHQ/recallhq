@@ -7,7 +7,8 @@ from constants import KNOWLEDGE_BASE_PATH
 from recall_utils import update_state
 from video_index.rags.text_rag import save_processed_document, generate_tags_and_images
 from video_index.video_processing.ingest_video import save_uploaded_media, Video
-
+from dotenv import load_dotenv
+load_dotenv()
 
 def provide_post_process_info(media_label, media_paths):
     file_content = {'media_label': f"{media_label}", 'content': media_paths}
@@ -36,19 +37,25 @@ def process_content(is_youtube_link, media_label, content):
     video_paths = []
     audio_paths = []
     text_paths = []
+    video_urls = []
     
     if is_youtube_link:
         youtube_links = content.split(',')
 
         for youtube_link in youtube_links:
             video = Video.from_url(youtube_link.strip())
-            video.download()
+            try:
+                video.download()
+            except Exception as e:
+                st.error(f"Failed to download video: {e}: {youtube_link}")
+                continue
             video_path, audio_path, text_path = video.process_video_with_index(storage_path)
             video.extract_images_with_index(storage_path)
 
             video_paths.append(video_path)
             audio_paths.append(audio_path)
             text_paths.append(text_path)
+            video_urls.append(youtube_link.strip())
     else:
         media_path, file_name, file_ext = save_uploaded_media(content)
         if file_ext not in {"mp4"}:
@@ -67,6 +74,7 @@ def process_content(is_youtube_link, media_label, content):
     }
     if audio_paths != video_paths:
         media_paths["video_paths"] = video_paths
+        media_paths["video_urls"] = video_urls
     if text_paths != audio_paths:
         media_paths["audio_paths"] = audio_paths
     provide_post_process_info(media_label, media_paths)

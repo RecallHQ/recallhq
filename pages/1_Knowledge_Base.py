@@ -7,7 +7,7 @@ import asyncio
 from pathlib import Path
 import speech_recognition as sr
 from concurrent.futures import ThreadPoolExecutor
-from constants import KNOWLEDGE_BASE_PATH, demo_media_labels
+from constants import KNOWLEDGE_BASE_PATH, demo_media_labels, skip_media_labels
 from recall_utils import load_state, generate_videoclips
 from video_index.rags.text_rag import search_knowledge_base, create_new_index, get_llm_response, get_mm_llm_response, get_media_indices, get_llm_tts_response
 from video_index.rags.scraper import perform_web_search
@@ -259,6 +259,8 @@ if st.session_state.phase == "starters":
         starter_prompts = []
         #st.write("Chat with one of the events below to get more information about the event.")
         for media_label, event_data in st.session_state.knowledge_base.items():
+            if media_label in skip_media_labels:
+                continue
             if event_data.get("title_image"):
                 image_path = os.path.join(os.getcwd(), event_data.get("title_image"))
             else:
