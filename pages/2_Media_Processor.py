@@ -49,7 +49,11 @@ def process_content(is_youtube_link, media_label, content):
             except Exception as e:
                 st.error(f"Failed to download video: {e}: {youtube_link}")
                 continue
-            video_path, audio_path, text_path = video.process_video_with_index(storage_path)
+            try:
+                video_path, audio_path, text_path = video.process_video_with_index(storage_path)
+            except Exception as e:
+                st.error(f"Failed to process video: {e}: {youtube_link}")
+                continue
             video.extract_images_with_index(storage_path)
 
             video_paths.append(video_path)
